@@ -315,7 +315,9 @@ nothrow:
         char* cptr = cast(char*) tmp;
         for(int i = 0; i < data._size; i++) 
         {        
-            static if (is(typeof(data._items[0].toRCString()) == RCString)) {
+            static if(is(typeof(data._items[0]) == RCString)) {
+                result += data._items[i];
+            }else static if (is(typeof(data._items[0].toRCString()) == RCString)) {
                 result += data._items[i].toRCString();
             }else {
                 format!T(cptr, data._items[i]);
@@ -636,7 +638,10 @@ nothrow:
         for(int i = 0; i < data._bucketSize;i++) {
             auto ptr = data.table[i];
             while(ptr != null) {
-                static if (is(typeof(ptr.key.toRCString()) == RCString)) {
+                static if(is(typeof(ptr.key) == RCString)) {
+                    result += ptr.key;
+                }
+                else static if (is(typeof(ptr.key.toRCString()) == RCString)) {
                     result += ptr.key.toRCString();
                 }else {
                     format!K(cptr, ptr.key);
@@ -646,7 +651,10 @@ nothrow:
 
                 result += ":";
 
-                static if (is(typeof(ptr.value.toRCString()) == RCString)) {
+                static if(is(typeof(ptr.value) == RCString)) {
+                    result += ptr.value;
+                }
+                else static if (is(typeof(ptr.value.toRCString()) == RCString)) {
                     result += ptr.value.toRCString();
                 }else {
                     format!V(cptr, ptr.value);
@@ -885,7 +893,9 @@ nothrow:
         for(int i = 0; i < data._bucketSize;i++) {
             auto ptr = data.table[i];
             while(ptr != null) {
-                static if (is(typeof(ptr.value.toRCString()) == RCString)) {
+                static if(is(typeof(ptr.value) == RCString)) {
+                    result += ptr.value;
+                }else static if (is(typeof(ptr.value.toRCString()) == RCString)) {
                     result += ptr.value.toRCString();
                 }else {
                     format!T(cptr, ptr.value);
@@ -913,6 +923,7 @@ nothrow:
 
     ~this() {
         if(ptr) {
+            printf("Free RCString\n");
             free(ptr);
             ptr = null;
         }
@@ -1019,7 +1030,9 @@ nothrow:
     RCString opBinary(string op, T)(T rhs)
     {
         static if (op == "+") {
-            static if (is(typeof(rhs.toRCString()) == RCString)) {
+            static if(is(typeof(rhs) == RCString)) {
+                return opBinary!op(rhs);
+            }else static if (is(typeof(rhs.toRCString()) == RCString)) {
                 return opBinary!op(rhs.toRCString());
             }else {
                 auto result = RCString("[");
@@ -1071,8 +1084,10 @@ nothrow:
     void opOpAssign(string op, T)(T rhs) {
         
         static if (op == "+") {
-            static if (is(typeof(rhs.toRCString()) == RCString)) {
-                this.opOpAssign!op(rhs.toRCString());
+            static if(is(typeof(rhs) == RCString)) {
+                opOpAssign!op(rhs);
+            }else static if (is(typeof(rhs.toRCString()) == RCString)) {
+                opOpAssign!op(rhs.toRCString());
             }else {
                 char [1024] tmp;
                 char* cptr = cast(char*) tmp;
@@ -1104,10 +1119,14 @@ nothrow:
         return result;
     }
 
+    RCString subString(int start) {
+        return subString(start, data._length);
+    }
+
     private int indexOf(const char* ptr) {
         char* pos = strstr(data.ptr, ptr);
         if(pos) {
-            return pos - ptr;
+            return pos - data.ptr;
         }
         return -1;
     }

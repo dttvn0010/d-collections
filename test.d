@@ -120,6 +120,18 @@ void testDictList() {
     d2.toRCString().printLine();
 }
 
+void testString() {
+    auto items = RCString("1,2,3,4").split(",");
+	items.toRCString().printLine();
+
+	RCString("-").join(items).printLine();
+
+	printf("%d\n", RCString("Hello world").indexOf("123"));
+	printf("%d\n", RCString("Hello world").indexOf("world"));
+	RCString("Hello world").subString(6, 8).printLine();
+	RCString("Hello world").subString(6).printLine();
+}
+
 extern(C) int main() {
     testList1();
     testList2();
@@ -128,5 +140,6 @@ extern(C) int main() {
     //testDict3();
     testSet();
     testDictList();
+    testString();
     return 0;
 }
