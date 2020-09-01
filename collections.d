@@ -969,7 +969,7 @@ nothrow:
         auto result = emptyRCString();
         int len = st.length;
         result.data.ptr = cast(char*) malloc(len+1);
-        strncpy(result.data.ptr, &st[0], len);
+        if(len > 0) strncpy(result.data.ptr, &st[0], len);
         result.data.ptr[len] = 0;
         result.data._length = len;
         return result;
@@ -978,7 +978,7 @@ nothrow:
     void opAssign(string rhs) {
         int len = rhs.length;
         ensureCap(len + 1);
-        strncpy(data.ptr, &rhs[0], len);
+        if(len > 0) strncpy(data.ptr, &rhs[0], len);
         data.ptr[len] = 0;
         data._length = len;
     }
@@ -994,8 +994,8 @@ nothrow:
             int len1 = data.length;
             int len2 = rhs.data.length;
             result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-            strncpy(result.data.ptr, data.ptr, len1);
-            strncpy(result.data.ptr + len1, rhs.data.ptr, len2);
+            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
+            if(len2 > 0) strncpy(result.data.ptr + len1, rhs.data.ptr, len2);
             result.data.ptr[len1+len2] = 0;
             result.data.length = len1+len2;
             return result;
@@ -1011,8 +1011,8 @@ nothrow:
             int len1 = data._length;
             int len2 = rhs.length;
             result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-            strncpy(result.data.ptr, data.ptr, len1);
-            strncpy(result.data.ptr + len1, &rhs[0], len2);
+            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
+            if(len2 > 0) strncpy(result.data.ptr + len1, &rhs[0], len2);
             result.data.ptr[len1+len2] = 0;
             result.data._length = len1+len2;
             return result;
@@ -1032,8 +1032,8 @@ nothrow:
             int len1 = data._length;
             int len2 = strlen(cptr);
             result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-            strncpy(result.data.ptr, data.ptr, len1);
-            strncpy(result.data.ptr + len1, cptr, len2);
+            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
+            if(len2 > 0) strncpy(result.data.ptr + len1, cptr, len2);
             result.data.ptr[len1+len2] = 0;
             result.data._length = len1+len2;
             return result;
@@ -1047,7 +1047,7 @@ nothrow:
             int len1 = data._length;
             int len2 = rhs.length;
             ensureCap(len1 + len2 + 1);
-            strncpy(data.ptr + len1, &rhs[0], len2);
+            if(len2 > 0) strncpy(data.ptr + len1, &rhs[0], len2);
             data.ptr[len1+len2] = 0;
             data._length = len1 + len2;
         }
@@ -1060,7 +1060,7 @@ nothrow:
             int len1 = data._length;
             int len2 = rhs.length;
             ensureCap(len1 + len2 + 1);
-            strncpy(data.ptr + len1, rhs.data.ptr, len2);
+            if(len2 > 0) strncpy(data.ptr + len1, rhs.data.ptr, len2);
             data.ptr[len1+len2] = 0;
             data._length = len1 + len2;
         }
@@ -1077,7 +1077,7 @@ nothrow:
             int len1 = data._length;
             int len2 = strlen(cptr);
             ensureCap(len1 + len2 + 1);
-            strncpy(data.ptr + len1, cptr, len2);
+            if(len2 > 0) strncpy(data.ptr + len1, cptr, len2);
             data.ptr[len1+len2] = 0;
             data._length = len1 + len2;
         }
@@ -1093,7 +1093,7 @@ nothrow:
 
         auto result = emptyRCString();
         result.data.ptr = cast(char*) malloc(len + 1);
-        strncpy(result.data.ptr, data.ptr + start, len);
+        if(len > 0) strncpy(result.data.ptr, data.ptr + start, len);
         result.data.ptr[len] = 0;
         result.data._length = len;
         return result;
