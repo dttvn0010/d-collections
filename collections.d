@@ -986,13 +986,13 @@ nothrow:
     {
         static if (op == "+") {
             auto result = emptyRCString();
-            int len1 = data.length;
-            int len2 = rhs.data.length;
+            int len1 = data._length;
+            int len2 = rhs.data._length;
             result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
             if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
             if(len2 > 0) strncpy(result.data.ptr + len1, rhs.data.ptr, len2);
             result.data.ptr[len1+len2] = 0;
-            result.data.length = len1+len2;
+            result.data._length = len1+len2;
             return result;
         }
 
@@ -1018,20 +1018,25 @@ nothrow:
 
     RCString opBinary(string op, T)(T rhs)
     {
-        char[1024] tmp;
-        char* cptr = cast(char*) tmp;
-        format!T(cptr, rhs);
-
         static if (op == "+") {
-            auto result = emptyRCString();
-            int len1 = data._length;
-            int len2 = strlen(cptr);
-            result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
-            if(len2 > 0) strncpy(result.data.ptr + len1, cptr, len2);
-            result.data.ptr[len1+len2] = 0;
-            result.data._length = len1+len2;
-            return result;
+            static if (is(typeof(rhs.toRCString()) == RCString)) {
+                return opBinary!op(rhs.toRCString());
+            }else {
+                auto result = RCString("[");
+                char[1024] tmp;
+                char* cptr = cast(char*) tmp;
+                format!T(cptr, rhs);
+
+                int len1 = data._length;
+                int len2 = strlen(cptr);
+                
+                result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
+                if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
+                if(len2 > 0) strncpy(result.data.ptr + len1, cptr, len2);
+                result.data.ptr[len1+len2] = 0;
+                result.data._length = len1+len2;
+                return result;
+            }
         }
 
         else static assert(0, "Operator "~op~" not implemented");
@@ -1064,17 +1069,22 @@ nothrow:
     }
 
     void opOpAssign(string op, T)(T rhs) {
-        char [1024] tmp;
-        char* cptr = cast(char*) tmp;
-        format!T(cptr, rhs);
-
+        
         static if (op == "+") {
-            int len1 = data._length;
-            int len2 = strlen(cptr);
-            ensureCap(len1 + len2 + 1);
-            if(len2 > 0) strncpy(data.ptr + len1, cptr, len2);
-            data.ptr[len1+len2] = 0;
-            data._length = len1 + len2;
+            static if (is(typeof(rhs.toRCString()) == RCString)) {
+                this.opOpAssign!op(rhs.toRCString());
+            }else {
+                char [1024] tmp;
+                char* cptr = cast(char*) tmp;
+                format!T(cptr, rhs);
+
+                int len1 = data._length;
+                int len2 = strlen(cptr);
+                ensureCap(len1 + len2 + 1);
+                if(len2 > 0) strncpy(data.ptr + len1, cptr, len2);
+                data.ptr[len1+len2] = 0;
+                data._length = len1 + len2;
+            }
         }
 
         else static assert(0, "Operator "~op~" not implemented");
@@ -1221,6 +1231,5 @@ void format(T)(char* ptr, ref T x) {
         return;
     }
 
-    printf("Data type not supported.\n");
-    exit(0);
+    sprintf(ptr, "@Obj");
 }
