@@ -314,24 +314,24 @@ nothrow:
     }
 
     RCString toRCString() {
-		auto result = RCString("[");
-		char[1024] tmp;
+        auto result = RCString("[");
+        char[1024] tmp;
 
-		char* cptr = cast(char*) tmp;
-		for(int i = 0; i < data._size; i++) 
-		{		
-			static if (is(typeof(data._items[0].toRCString()) == RCString)) {
-				result += data._items[i].toRCString();
-			}else {
-				format!T(cptr, data._items[i]);
-				int len = strlen(cptr);
-				result += cast(string) tmp[0..len];
-			}
-			if(i + 1 < data._size) result += " , ";
-		}
-		result += "]";
-		return result;
-	}
+        char* cptr = cast(char*) tmp;
+        for(int i = 0; i < data._size; i++) 
+        {        
+            static if (is(typeof(data._items[0].toRCString()) == RCString)) {
+                result += data._items[i].toRCString();
+            }else {
+                format!T(cptr, data._items[i]);
+                int len = strlen(cptr);
+                result += cast(string) tmp[0..len];
+            }
+            if(i + 1 < data._size) result += " , ";
+        }
+        result += "]";
+        return result;
+    }
 }
 
 struct DictItem(K,V) {
@@ -636,24 +636,24 @@ nothrow:
         int count = 0;
         char[1024] tmp;
         char* cptr = cast(char*) tmp;
-		int len;
+        int len;
 
         for(int i = 0; i < data._bucketSize;i++) {
             auto ptr = data.table[i];
             while(ptr != null) {
-				static if (is(typeof(ptr.key.toRCString()) == RCString)) {
-					result += ptr.key.toRCString();
-				}else {
-					format!K(cptr, ptr.key);
-					len = strlen(cptr);
-					result += cast(string) tmp[0..len];
-				}
+                static if (is(typeof(ptr.key.toRCString()) == RCString)) {
+                    result += ptr.key.toRCString();
+                }else {
+                    format!K(cptr, ptr.key);
+                    len = strlen(cptr);
+                    result += cast(string) tmp[0..len];
+                }
 
                 result += ":";
 
                 static if (is(typeof(ptr.value.toRCString()) == RCString)) {
-					result += ptr.value.toRCString();
-				}else {
+                    result += ptr.value.toRCString();
+                }else {
                     format!V(cptr, ptr.value);
                     len = strlen(cptr);
                     result += cast(string) tmp[0..len];
@@ -891,8 +891,8 @@ nothrow:
             auto ptr = data.table[i];
             while(ptr != null) {
                 static if (is(typeof(ptr.value.toRCString()) == RCString)) {
-					result += ptr.value.toRCString();
-				}else {
+                    result += ptr.value.toRCString();
+                }else {
                     format!T(cptr, ptr.value);
                     int len = strlen(cptr);
                     result += cast(string) tmp[0..len];

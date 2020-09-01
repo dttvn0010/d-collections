@@ -114,10 +114,10 @@ void testDictList() {
     auto d2 = RCDict!(int, RCList!int)();
     int[4] arr1 = [1, 2, 3, 4];
     int[4] arr2 = [3, 4, 5, 6];
-	d2[0] = RCList!int(arr1);
-	d2[1] = RCList!int(arr2);
+    d2[0] = RCList!int(arr1);
+    d2[1] = RCList!int(arr2);
 
-	d2.toRCString().printLine();
+    d2.toRCString().printLine();
 }
 
 extern(C) int main() {
