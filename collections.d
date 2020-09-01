@@ -36,11 +36,6 @@ struct RCList(T) {
 nothrow:    
     RefCounted!(_RCListData!T, RefCountedAutoInitialize.no) data;
 
-    static RCList nullRCList() {
-        RCList lst;
-        return lst;
-    }
-
     bool isInitialized() {
         return data.refCountedStore().isInitialized();
     }
