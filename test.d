@@ -59,7 +59,7 @@ void testList1() {
     auto llst = RCList!(RCList!int)();
     llst.add(lst);
 
-    st = llst.toRCString((ref x) => x.toRCString());
+    st = llst.toRCString();
     st.printLine();
 
     foreach(ref x; llst[0]) {
@@ -110,12 +110,23 @@ void testSet() {
     s.toRCString().printLine();
 }
 
+void testDictList() {
+    auto d2 = RCDict!(int, RCList!int)();
+    int[4] arr1 = [1, 2, 3, 4];
+    int[4] arr2 = [3, 4, 5, 6];
+	d2[0] = RCList!int(arr1);
+	d2[1] = RCList!int(arr2);
+
+	d2.toRCString().printLine();
+}
+
 extern(C) int main() {
-    //testList1();
-    //testList2();
-    //testDict1();
-    //testDict2();
+    testList1();
+    testList2();
+    testDict1();
+    testDict2();
     //testDict3();
     testSet();
+    testDictList();
     return 0;
 }

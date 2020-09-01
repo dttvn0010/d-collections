@@ -35,7 +35,7 @@ struct _RCListData(T) {
 struct RCList(T) {
 nothrow:    
     RefCounted!(_RCListData!T, RefCountedAutoInitialize.no) data;
-    
+
     static RCList nullRCList() {
         RCList lst;
         return lst;
@@ -49,7 +49,7 @@ nothrow:
         RCList lst;
         auto data = _RCListData!T(null, 0, 0);
         lst.data = refCounted(move(data));
-        
+
         lst.data._items = cast (T*) malloc(T.sizeof * sz);
         memset(cast(char*) lst.data._items, 0, T.sizeof * sz);
         lst.data._size = lst.data._capacity = sz;
@@ -60,7 +60,7 @@ nothrow:
     static RCList opCall() {
         return opCall(0);
     }
-    
+
     private void ensureCap(size_t new_capacity) {
         if(new_capacity < data._capacity) return;
         size_t capacity = data._capacity;
@@ -313,24 +313,25 @@ nothrow:
         }
     }
 
-    RCString toRCString(RCString delegate(ref T) nothrow f=null) {
-        auto result = RCString("[");
-        char[1024] tmp;
-        char* cptr = cast(char*) tmp;
-        for(int i = 0; i < data._size; i++) 
-        {
-            if(f) {
-                result += f(data._items[i]);
-            }else {
-                format!T(cptr, data._items[i]);
-                int len = strlen(cptr);
-                result += cast(string) tmp[0..len];
-            }
-            if(i + 1 < data._size) result += " , ";
-        }
-        result += "]";
-        return result;
-    }
+    RCString toRCString() {
+		auto result = RCString("[");
+		char[1024] tmp;
+
+		char* cptr = cast(char*) tmp;
+		for(int i = 0; i < data._size; i++) 
+		{		
+			static if (is(typeof(data._items[0].toRCString()) == RCString)) {
+				result += data._items[i].toRCString();
+			}else {
+				format!T(cptr, data._items[i]);
+				int len = strlen(cptr);
+				result += cast(string) tmp[0..len];
+			}
+			if(i + 1 < data._size) result += " , ";
+		}
+		result += "]";
+		return result;
+	}
 }
 
 struct DictItem(K,V) {
@@ -377,9 +378,9 @@ nothrow:
 
 public struct RCDict(K, V) {
 nothrow:
-    
+
     RefCounted!(_RCDictData!(K,V), RefCountedAutoInitialize.no) data;
-    
+
     bool isInitialized() {
         return data.refCountedStore().isInitialized();
     }
@@ -420,7 +421,7 @@ nothrow:
         }else {    
             auto new_ptr = newItem!(K,V)();
             new_ptr.key = key;
-            
+
             static if(isCopyable!V) {
                 new_ptr.value = value;
             }else {
@@ -525,7 +526,7 @@ nothrow:
                     }else {
                         prev.next = next;
                     }
-                    
+
                     destroy(ptr.key);
                     free(ptr);
                 }else {
@@ -549,7 +550,7 @@ nothrow:
         }
         return lst;
     }
-    
+
     static if(isCopyable!V) {
         RCList!V getValues() {
             auto lst = RCList!V();
@@ -591,7 +592,7 @@ nothrow:
             size_t hash = key.hashOf();
             size_t index = hash % data._bucketSize;        
             auto ptr = data.table[index];
-            
+
             while(ptr && ptr.key != key && ptr.next != null) {
                 ptr = ptr.next;
             }
@@ -630,29 +631,31 @@ nothrow:
         return result;
     }
 
-    RCString toRCString(RCString delegate(ref K) nothrow fk=null, RCString delegate(ref V) nothrow fv=null) {
+    RCString toRCString() {
         auto result = RCString("{");
         int count = 0;
         char[1024] tmp;
         char* cptr = cast(char*) tmp;
+		int len;
 
         for(int i = 0; i < data._bucketSize;i++) {
             auto ptr = data.table[i];
             while(ptr != null) {
-                if(fk) {
-                    result += fk(ptr.key);
-                }else {
-                    format!K(cptr, ptr.key);
-                    int len = strlen(cptr);
-                    result += cast(string) tmp[0..len];
-                }
+				static if (is(typeof(ptr.key.toRCString()) == RCString)) {
+					result += ptr.key.toRCString();
+				}else {
+					format!K(cptr, ptr.key);
+					len = strlen(cptr);
+					result += cast(string) tmp[0..len];
+				}
+
                 result += ":";
 
-                if(fv) {
-                    result += fv(ptr.value);
-                }else {
+                static if (is(typeof(ptr.value.toRCString()) == RCString)) {
+					result += ptr.value.toRCString();
+				}else {
                     format!V(cptr, ptr.value);
-                    int len = strlen(cptr);
+                    len = strlen(cptr);
                     result += cast(string) tmp[0..len];
                 }
 
@@ -712,7 +715,7 @@ nothrow:
 public struct RCSet(T) {
 nothrow:
     RefCounted!(_RCSetData!(T), RefCountedAutoInitialize.no) data;
-    
+
     bool isInitialized() {
         return data.refCountedStore().isInitialized();
     }
@@ -728,7 +731,7 @@ nothrow:
         memset(cast(char*) set.data.table, 0, allocSize);
         return set;
     }
-    
+
     static RCSet opCall(T[] arr) {
         auto set = RCSet();
         foreach(x; arr) {
@@ -759,7 +762,7 @@ nothrow:
         while(ptr && ptr.next && ptr.value != value) {
             ptr = ptr.next;
         }
-        
+
         if(!ptr || ptr.value != value) {
             auto new_ptr = newRCSetItem(value);
             data._size += 1;
@@ -769,7 +772,7 @@ nothrow:
                 data.table[index] = new_ptr;
             }
         }
-        
+
     }
 
     bool contains(T value) {
@@ -878,7 +881,7 @@ nothrow:
         return result;
     }
 
-    RCString toRCString(RCString delegate(ref T) nothrow f=null) {
+    RCString toRCString() {
         char[1024] tmp;
         auto result = RCString("{");
         int count = 0;
@@ -887,9 +890,9 @@ nothrow:
         for(int i = 0; i < data._bucketSize;i++) {
             auto ptr = data.table[i];
             while(ptr != null) {
-                if(f) {
-                    result += f(ptr.value);
-                }else {
+                static if (is(typeof(ptr.value.toRCString()) == RCString)) {
+					result += ptr.value.toRCString();
+				}else {
                     format!T(cptr, ptr.value);
                     int len = strlen(cptr);
                     result += cast(string) tmp[0..len];
@@ -906,7 +909,7 @@ nothrow:
 }
 
 struct _RCStringData{
-    nothrow:
+nothrow:
     char* ptr;
     int _length;
     int _capacity;
@@ -922,7 +925,7 @@ struct _RCStringData{
 }
 
 struct RCString {
-    nothrow:
+nothrow:
     RefCounted!(_RCStringData, RefCountedAutoInitialize.no) data;
 
     bool isInitialized() {
@@ -949,7 +952,7 @@ struct RCString {
         if(new_capacity <= data._capacity) return;
 
         size_t capacity = data._capacity;
-        
+
         while(capacity < new_capacity) {
             capacity += capacity/2 + 8; 
         }
@@ -1087,7 +1090,7 @@ struct RCString {
         if(end > data._length) end = data._length;
         if(start > end) end = start;
         int len = end - start;
-        
+
         auto result = emptyRCString();
         result.data.ptr = cast(char*) malloc(len + 1);
         strncpy(result.data.ptr, data.ptr + start, len);
@@ -1107,7 +1110,7 @@ struct RCString {
     int indexOf(string st) {
         const char* ptr = &st[0];
         return indexOf(ptr);
-        
+
     }
 
     int indexOf(RCString st) {
@@ -1150,7 +1153,7 @@ struct RCString {
 
     RCString join(RCList!RCString lst) {
         int totalLength = 0;
-        
+
         foreach(i,st; lst) {
             totalLength += st.data._length;
             if(i + 1 < lst.size()) {
