@@ -316,7 +316,8 @@ nothrow:
         for(int i = 0; i < data._size; i++) 
         {        
             static if(is(typeof(data._items[0]) == RCString)) {
-                result += data._items[i];
+                result += "'";
+                result += data._items[i] + "'";
             }else static if (is(typeof(data._items[0].toRCString()) == RCString)) {
                 result += data._items[i].toRCString();
             }else {
@@ -324,7 +325,7 @@ nothrow:
                 int len = strlen(cptr);
                 result += cast(string) tmp[0..len];
             }
-            if(i + 1 < data._size) result += " , ";
+            if(i + 1 < data._size) result += ", ";
         }
         result += "]";
         return result;
@@ -639,7 +640,9 @@ nothrow:
             auto ptr = data.table[i];
             while(ptr != null) {
                 static if(is(typeof(ptr.key) == RCString)) {
+                    result += "'";
                     result += ptr.key;
+                    result += "'";
                 }
                 else static if (is(typeof(ptr.key.toRCString()) == RCString)) {
                     result += ptr.key.toRCString();
@@ -649,10 +652,12 @@ nothrow:
                     result += cast(string) tmp[0..len];
                 }
 
-                result += ":";
+                result += ": ";
 
                 static if(is(typeof(ptr.value) == RCString)) {
+                    result += "'";
                     result += ptr.value;
+                    result += "'";
                 }
                 else static if (is(typeof(ptr.value.toRCString()) == RCString)) {
                     result += ptr.value.toRCString();
@@ -662,7 +667,7 @@ nothrow:
                     result += cast(string) tmp[0..len];
                 }
 
-                if(count + 1 < data._size) result += " , ";    
+                if(count + 1 < data._size) result += ", ";    
                 count += 1;
                 ptr = ptr.next;
             }
@@ -894,7 +899,9 @@ nothrow:
             auto ptr = data.table[i];
             while(ptr != null) {
                 static if(is(typeof(ptr.value) == RCString)) {
+                    result += "'";
                     result += ptr.value;
+                    result += "'";
                 }else static if (is(typeof(ptr.value.toRCString()) == RCString)) {
                     result += ptr.value.toRCString();
                 }else {
@@ -902,7 +909,7 @@ nothrow:
                     int len = strlen(cptr);
                     result += cast(string) tmp[0..len];
                 }
-                if(count + 1 < data._size) result += " , ";
+                if(count + 1 < data._size) result += ", ";
                 count += 1;
                 ptr = ptr.next;
             }
@@ -923,7 +930,6 @@ nothrow:
 
     ~this() {
         if(ptr) {
-            printf("Free RCString\n");
             free(ptr);
             ptr = null;
         }
@@ -1250,5 +1256,5 @@ void format(T)(char* ptr, ref T x) {
         return;
     }
 
-    sprintf(ptr, "@Obj");
+    sprintf(ptr, "[Object]");
 }
