@@ -332,7 +332,11 @@ struct _RCListData(T) {
         if(_items) {
             printf("Free RCList\n");
             for(int i = 0; i < _size; i++) {
-                destroy(_items[i]);
+                static if(!is(typeof(_items[0]) == RCString)) {
+                    destroy(_items[i]);
+                }else {
+                    destroy(_items[i].data);
+                }
             }
             free(_items);
             _items = null;
