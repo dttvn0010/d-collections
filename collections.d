@@ -1159,7 +1159,7 @@ nothrow:
             pos = strstr(ptr, delimiter);
             if(!pos) break;
 
-            long len = pos - ptr;
+            int len = cast(int)(pos - ptr);
             if (len > 0) {
                 lst.add(RCString(cast (string) (ptr[0..len])));
             }
@@ -1167,7 +1167,7 @@ nothrow:
         }
 
         if (ptr  < data.ptr + data._length){
-            long len = data.ptr + data._length - ptr;
+            int len = cast(int)(data.ptr + data._length - ptr);
             lst.add(RCString(cast (string) (ptr[0..len])));
         }
 
