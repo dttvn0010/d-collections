@@ -12,7 +12,314 @@ nothrow:
 
 enum isCopyable(S) = is(typeof(() { S foo = S.init; S copy = foo; } ));
 
-//struct RCString(T);
+struct _RCStringData{
+nothrow:
+    char* ptr;
+    size_t _length;
+    size_t _capacity;
+
+    @disable this(this); // not copyable
+
+    ~this() {
+        if(ptr) {
+            free(ptr);
+            ptr = null;
+        }
+    }
+}
+
+struct RCString {
+nothrow:
+    RefCounted!(_RCStringData, RefCountedAutoInitialize.no) data;
+
+    bool isInitialized() {
+        return data.refCountedStore().isInitialized();
+    }
+
+    static RCString emptyRCString() {
+        RCString result;
+        auto data = _RCStringData(null, 0, 0);
+        result.data = refCounted(move(data));
+        return result;
+    }
+
+    static RCString opCall() {
+        auto result = emptyRCString();
+        result.data.ptr = cast(char*) malloc(1);
+        result.data.ptr[0] = 0;
+        result.data._length = 0;
+        result.data._capacity = 1;
+        return result;
+    }
+
+    void ensureCap(size_t new_capacity) {
+        if(new_capacity <= data._capacity) return;
+
+        size_t capacity = data._capacity;
+
+        while(capacity < new_capacity) {
+            capacity += capacity/2 + 8; 
+        }
+        if(!data.ptr) {
+            data.ptr = cast(char*) malloc(capacity);
+            memset(data.ptr, 0, capacity);
+        }else {
+            data.ptr = cast(char*) realloc(data.ptr, capacity);
+            memset(data.ptr + data._length, 0, capacity - data._length);
+        }
+    }
+
+    static RCString opCall(string st) {
+        auto result = emptyRCString();
+        size_t len = st.length;
+        result.data.ptr = cast(char*) malloc(len+1);
+        if(len > 0) strncpy(result.data.ptr, &st[0], len);
+        result.data.ptr[len] = 0;
+        result.data._length = len;
+        return result;
+    }
+
+    void opAssign(string rhs) {
+        size_t len = rhs.length;
+        ensureCap(len + 1);
+        if(len > 0) strncpy(data.ptr, &rhs[0], len);
+        data.ptr[len] = 0;
+        data._length = len;
+    }
+
+    size_t length() {
+        return data._length;
+    }
+
+    RCString opBinary(string op)(RCString rhs)
+    {
+        static if (op == "+") {
+            auto result = emptyRCString();
+            int len1 = data._length;
+            int len2 = rhs.data._length;
+            result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
+            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
+            if(len2 > 0) strncpy(result.data.ptr + len1, rhs.data.ptr, len2);
+            result.data.ptr[len1+len2] = 0;
+            result.data._length = len1+len2;
+            return result;
+        }
+
+        else static assert(0, "Operator "~op~" not implemented");
+    }
+
+    RCString opBinary(string op)(string rhs)
+    {
+        static if (op == "+") {
+            auto result = emptyRCString();
+            size_t len1 = data._length;
+            size_t len2 = rhs.length;
+            result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
+            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
+            if(len2 > 0) strncpy(result.data.ptr + len1, &rhs[0], len2);
+            result.data.ptr[len1+len2] = 0;
+            result.data._length = len1+len2;
+            return result;
+        }
+
+        else static assert(0, "Operator "~op~" not implemented");
+    }
+
+    RCString opBinary(string op, T)(T rhs)
+    {
+        static if (op == "+") {
+            static if(is(typeof(rhs) == RCString)) {
+                return opBinary!op(rhs);
+            }else static if (is(typeof(rhs.toRCString()) == RCString)) {
+                return opBinary!op(rhs.toRCString());
+            }else {
+                auto result = RCString("[");
+                char[1024] tmp;
+                char* cptr = cast(char*) tmp;
+                format!T(cptr, rhs);
+
+                size_t len1 = data._length;
+                size_t len2 = strlen(cptr);
+                
+                result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
+                if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
+                if(len2 > 0) strncpy(result.data.ptr + len1, cptr, len2);
+                result.data.ptr[len1+len2] = 0;
+                result.data._length = len1+len2;
+                return result;
+            }
+        }
+
+        else static assert(0, "Operator "~op~" not implemented");
+    }
+
+    void opOpAssign(string op)(string rhs) {
+        static if (op == "+") {
+            size_t len1 = data._length;
+            size_t len2 = rhs.length;
+            ensureCap(len1 + len2 + 1);
+            if(len2 > 0) strncpy(data.ptr + len1, &rhs[0], len2);
+            data.ptr[len1+len2] = 0;
+            data._length = len1 + len2;
+        }
+
+        else static assert(0, "Operator "~op~" not implemented");
+    }
+
+    void opOpAssign(string op)(RCString rhs) {
+        static if (op == "+") {
+            size_t len1 = data._length;
+            size_t len2 = rhs.length;
+            ensureCap(len1 + len2 + 1);
+            if(len2 > 0) strncpy(data.ptr + len1, rhs.data.ptr, len2);
+            data.ptr[len1+len2] = 0;
+            data._length = len1 + len2;
+        }
+
+        else static assert(0, "Operator "~op~" not implemented");
+    }
+
+    void opOpAssign(string op, T)(T rhs) {
+        
+        static if (op == "+") {
+            static if(is(typeof(rhs) == RCString)) {
+                opOpAssign!op(rhs);
+            }else static if (is(typeof(rhs.toRCString()) == RCString)) {
+                opOpAssign!op(rhs.toRCString());
+            }else {
+                char [1024] tmp;
+                char* cptr = cast(char*) tmp;
+                format!T(cptr, rhs);
+
+                int len1 = data._length;
+                int len2 = strlen(cptr);
+                ensureCap(len1 + len2 + 1);
+                if(len2 > 0) strncpy(data.ptr + len1, cptr, len2);
+                data.ptr[len1+len2] = 0;
+                data._length = len1 + len2;
+            }
+        }
+
+        else static assert(0, "Operator "~op~" not implemented");
+    }
+
+    RCString subString(size_t start, size_t end) {
+        if(start < 0) start = 0;
+        if(end > data._length) end = data._length;
+        if(start > end) end = start;
+        int len = cast(int) (end - start);
+
+        auto result = emptyRCString();
+        result.data.ptr = cast(char*) malloc(len + 1);
+        if(len > 0) strncpy(result.data.ptr, data.ptr + start, len);
+        result.data.ptr[len] = 0;
+        result.data._length = len;
+        return result;
+    }
+
+    RCString subString(int start) {
+        return subString(start, data._length);
+    }
+
+    private int indexOf(const char* ptr) {
+        char* pos = strstr(data.ptr, ptr);
+        if(pos) {
+            return cast(int)(pos - data.ptr);
+        }
+        return -1;
+    }
+
+    int indexOf(string st) {
+        const char* ptr = &st[0];
+        return indexOf(ptr);
+    }
+
+    int indexOf(RCString st) {
+        return indexOf(st.data.ptr);
+    }
+    
+    private RCList!RCString split(const char* delimiter) {
+        auto lst = RCList!RCString();
+        size_t delimiter_len = strlen(delimiter);
+        char *ptr = data.ptr;
+        char *pos;
+
+        while (true)
+        {
+            pos = strstr(ptr, delimiter);
+            if(!pos) break;
+
+            int len = cast(int)(pos - ptr);
+            if (len > 0) {
+                lst.add(RCString(cast (string) (ptr[0..len])));
+            }
+            ptr = pos + delimiter_len;
+        }
+
+        if (ptr  < data.ptr + data._length){
+            int len = cast(int)(data.ptr + data._length - ptr);
+            lst.add(RCString(cast (string) (ptr[0..len])));
+        }
+
+        return lst;
+    }
+
+    RCList!RCString split(string st) {
+        return split(&st[0]);
+    }
+
+    RCList!RCString split(RCString st) {
+        return split(st.data.ptr);
+    }
+
+    RCString join(RCList!RCString lst) {
+        int totalLength = 0;
+
+        foreach(i,st; lst) {
+            totalLength += st.data._length;
+            if(i + 1 < lst.size()) {
+                totalLength += data._length;
+            }
+        }
+
+        auto result = emptyRCString();
+        result.data.ptr = cast(char*) malloc(totalLength + 1);
+
+        char* ptr = result.data.ptr;
+
+        foreach(i,st; lst) {
+            memcpy(ptr, st.data.ptr, st.data._length);
+            ptr += st.data._length;
+
+            if(i + 1 < lst.size()) {
+                memcpy(ptr, data.ptr, data._length);
+                ptr += data._length;
+            }            
+        }
+
+        ptr[0] = 0;
+        result.data._length = totalLength;
+        return result;
+    }
+
+    hash_t toHash() const nothrow {
+        return hashOf(cast(string)data.ptr[0..data._length]);
+    }
+
+    bool opEquals(RCString st2){        
+        auto s1 = cast(string) data.ptr[0..data._length];
+        auto s2 = cast(string) st2.data.ptr[0..st2.data._length];
+        return s1 == s2;
+    }
+
+    void print() {
+        printf("%s", data.ptr);
+    }
+
+    void printLine() {
+        printf("%s\n", data.ptr);
+    }
+}
 
 struct _RCListData(T) {
     T* _items;
@@ -919,315 +1226,6 @@ nothrow:
 
         result += "}";
         return result;
-    }
-}
-
-struct _RCStringData{
-nothrow:
-    char* ptr;
-    size_t _length;
-    size_t _capacity;
-
-    @disable this(this); // not copyable
-
-    ~this() {
-        if(ptr) {
-            free(ptr);
-            ptr = null;
-        }
-    }
-}
-
-struct RCString {
-nothrow:
-    RefCounted!(_RCStringData, RefCountedAutoInitialize.no) data;
-
-    bool isInitialized() {
-        return data.refCountedStore().isInitialized();
-    }
-
-    static RCString emptyRCString() {
-        RCString result;
-        auto data = _RCStringData(null, 0, 0);
-        result.data = refCounted(move(data));
-        return result;
-    }
-
-    static RCString opCall() {
-        auto result = emptyRCString();
-        result.data.ptr = cast(char*) malloc(1);
-        result.data.ptr[0] = 0;
-        result.data._length = 0;
-        result.data._capacity = 1;
-        return result;
-    }
-
-    void ensureCap(size_t new_capacity) {
-        if(new_capacity <= data._capacity) return;
-
-        size_t capacity = data._capacity;
-
-        while(capacity < new_capacity) {
-            capacity += capacity/2 + 8; 
-        }
-        if(!data.ptr) {
-            data.ptr = cast(char*) malloc(capacity);
-            memset(data.ptr, 0, capacity);
-        }else {
-            data.ptr = cast(char*) realloc(data.ptr, capacity);
-            memset(data.ptr + data._length, 0, capacity - data._length);
-        }
-    }
-
-    static RCString opCall(string st) {
-        auto result = emptyRCString();
-        size_t len = st.length;
-        result.data.ptr = cast(char*) malloc(len+1);
-        if(len > 0) strncpy(result.data.ptr, &st[0], len);
-        result.data.ptr[len] = 0;
-        result.data._length = len;
-        return result;
-    }
-
-    void opAssign(string rhs) {
-        size_t len = rhs.length;
-        ensureCap(len + 1);
-        if(len > 0) strncpy(data.ptr, &rhs[0], len);
-        data.ptr[len] = 0;
-        data._length = len;
-    }
-
-    size_t length() {
-        return data._length;
-    }
-
-    RCString opBinary(string op)(RCString rhs)
-    {
-        static if (op == "+") {
-            auto result = emptyRCString();
-            int len1 = data._length;
-            int len2 = rhs.data._length;
-            result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
-            if(len2 > 0) strncpy(result.data.ptr + len1, rhs.data.ptr, len2);
-            result.data.ptr[len1+len2] = 0;
-            result.data._length = len1+len2;
-            return result;
-        }
-
-        else static assert(0, "Operator "~op~" not implemented");
-    }
-
-    RCString opBinary(string op)(string rhs)
-    {
-        static if (op == "+") {
-            auto result = emptyRCString();
-            size_t len1 = data._length;
-            size_t len2 = rhs.length;
-            result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
-            if(len2 > 0) strncpy(result.data.ptr + len1, &rhs[0], len2);
-            result.data.ptr[len1+len2] = 0;
-            result.data._length = len1+len2;
-            return result;
-        }
-
-        else static assert(0, "Operator "~op~" not implemented");
-    }
-
-    RCString opBinary(string op, T)(T rhs)
-    {
-        static if (op == "+") {
-            static if(is(typeof(rhs) == RCString)) {
-                return opBinary!op(rhs);
-            }else static if (is(typeof(rhs.toRCString()) == RCString)) {
-                return opBinary!op(rhs.toRCString());
-            }else {
-                auto result = RCString("[");
-                char[1024] tmp;
-                char* cptr = cast(char*) tmp;
-                format!T(cptr, rhs);
-
-                size_t len1 = data._length;
-                size_t len2 = strlen(cptr);
-                
-                result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-                if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
-                if(len2 > 0) strncpy(result.data.ptr + len1, cptr, len2);
-                result.data.ptr[len1+len2] = 0;
-                result.data._length = len1+len2;
-                return result;
-            }
-        }
-
-        else static assert(0, "Operator "~op~" not implemented");
-    }
-
-    void opOpAssign(string op)(string rhs) {
-        static if (op == "+") {
-            size_t len1 = data._length;
-            size_t len2 = rhs.length;
-            ensureCap(len1 + len2 + 1);
-            if(len2 > 0) strncpy(data.ptr + len1, &rhs[0], len2);
-            data.ptr[len1+len2] = 0;
-            data._length = len1 + len2;
-        }
-
-        else static assert(0, "Operator "~op~" not implemented");
-    }
-
-    void opOpAssign(string op)(RCString rhs) {
-        static if (op == "+") {
-            size_t len1 = data._length;
-            size_t len2 = rhs.length;
-            ensureCap(len1 + len2 + 1);
-            if(len2 > 0) strncpy(data.ptr + len1, rhs.data.ptr, len2);
-            data.ptr[len1+len2] = 0;
-            data._length = len1 + len2;
-        }
-
-        else static assert(0, "Operator "~op~" not implemented");
-    }
-
-    void opOpAssign(string op, T)(T rhs) {
-        
-        static if (op == "+") {
-            static if(is(typeof(rhs) == RCString)) {
-                opOpAssign!op(rhs);
-            }else static if (is(typeof(rhs.toRCString()) == RCString)) {
-                opOpAssign!op(rhs.toRCString());
-            }else {
-                char [1024] tmp;
-                char* cptr = cast(char*) tmp;
-                format!T(cptr, rhs);
-
-                int len1 = data._length;
-                int len2 = strlen(cptr);
-                ensureCap(len1 + len2 + 1);
-                if(len2 > 0) strncpy(data.ptr + len1, cptr, len2);
-                data.ptr[len1+len2] = 0;
-                data._length = len1 + len2;
-            }
-        }
-
-        else static assert(0, "Operator "~op~" not implemented");
-    }
-
-    RCString subString(size_t start, size_t end) {
-        if(start < 0) start = 0;
-        if(end > data._length) end = data._length;
-        if(start > end) end = start;
-        int len = cast(int) (end - start);
-
-        auto result = emptyRCString();
-        result.data.ptr = cast(char*) malloc(len + 1);
-        if(len > 0) strncpy(result.data.ptr, data.ptr + start, len);
-        result.data.ptr[len] = 0;
-        result.data._length = len;
-        return result;
-    }
-
-    RCString subString(int start) {
-        return subString(start, data._length);
-    }
-
-    private int indexOf(const char* ptr) {
-        char* pos = strstr(data.ptr, ptr);
-        if(pos) {
-            return cast(int)(pos - data.ptr);
-        }
-        return -1;
-    }
-
-    int indexOf(string st) {
-        const char* ptr = &st[0];
-        return indexOf(ptr);
-    }
-
-    int indexOf(RCString st) {
-        return indexOf(st.data.ptr);
-    }
-
-    private RCList!RCString split(const char* delimiter) {
-        auto lst = RCList!RCString();
-        size_t delimiter_len = strlen(delimiter);
-        char *ptr = data.ptr;
-        char *pos;
-
-        while (true)
-        {
-            pos = strstr(ptr, delimiter);
-            if(!pos) break;
-
-            int len = cast(int)(pos - ptr);
-            if (len > 0) {
-                lst.add(RCString(cast (string) (ptr[0..len])));
-            }
-            ptr = pos + delimiter_len;
-        }
-
-        if (ptr  < data.ptr + data._length){
-            int len = cast(int)(data.ptr + data._length - ptr);
-            lst.add(RCString(cast (string) (ptr[0..len])));
-        }
-
-        return lst;
-    }
-
-    RCList!RCString split(string st) {
-        return split(&st[0]);
-    }
-
-    RCList!RCString split(RCString st) {
-        return split(st.data.ptr);
-    }
-
-    RCString join(RCList!RCString lst) {
-        int totalLength = 0;
-
-        foreach(i,st; lst) {
-            totalLength += st.data._length;
-            if(i + 1 < lst.size()) {
-                totalLength += data._length;
-            }
-        }
-
-        auto result = emptyRCString();
-        result.data.ptr = cast(char*) malloc(totalLength + 1);
-
-        char* ptr = result.data.ptr;
-
-        foreach(i,st; lst) {
-            memcpy(ptr, st.data.ptr, st.data._length);
-            ptr += st.data._length;
-
-            if(i + 1 < lst.size()) {
-                memcpy(ptr, data.ptr, data._length);
-                ptr += data._length;
-            }            
-        }
-
-        ptr[0] = 0;
-        result.data._length = totalLength;
-        return result;
-    }
-
-    hash_t toHash() const nothrow {
-        return hashOf(cast(string)data.ptr[0..data._length]);
-    }
-
-    bool opEquals(RCString st2){        
-        auto s1 = cast(string) data.ptr[0..data._length];
-        auto s2 = cast(string) st2.data.ptr[0..st2.data._length];
-        return s1 == s2;
-    }
-
-    void print() {
-        printf("%s", data.ptr);
-    }
-
-    void printLine() {
-        printf("%s\n", data.ptr);
     }
 }
 
