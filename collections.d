@@ -12,6 +12,8 @@ nothrow:
 
 enum isCopyable(S) = is(typeof(() { S foo = S.init; S copy = foo; } ));
 
+//struct RCString(T);
+
 struct _RCListData(T) {
     T* _items;
     size_t _size;
@@ -322,7 +324,7 @@ nothrow:
                 result += data._items[i].toRCString();
             }else {
                 format!T(cptr, data._items[i]);
-                int len = strlen(cptr);
+                size_t len = strlen(cptr);
                 result += cast(string) tmp[0..len];
             }
             if(i + 1 < data._size) result += ", ";
@@ -349,8 +351,8 @@ DictItem!(K,V)* newItem(K,V)() {
 struct _RCDictData(K, V) {
 nothrow:
     DictItem!(K,V)** table;
-    int _bucketSize;
-    int _size;    
+    size_t _bucketSize;
+    size_t _size;    
 
     @disable this(this); // not copyable
 
@@ -634,7 +636,7 @@ nothrow:
         int count = 0;
         char[1024] tmp;
         char* cptr = cast(char*) tmp;
-        int len;
+        size_t len;
 
         for(int i = 0; i < data._bucketSize;i++) {
             auto ptr = data.table[i];
@@ -695,8 +697,8 @@ RCSetItem!(T)* newRCSetItem(T)(T value) {
 struct _RCSetData(T) {
 nothrow:
     RCSetItem!(T)** table;
-    int _bucketSize;
-    int _size;    
+    size_t _bucketSize;
+    size_t _size;    
 
     @disable this(this); // not copyable
 
@@ -906,7 +908,7 @@ nothrow:
                     result += ptr.value.toRCString();
                 }else {
                     format!T(cptr, ptr.value);
-                    int len = strlen(cptr);
+                    size_t len = strlen(cptr);
                     result += cast(string) tmp[0..len];
                 }
                 if(count + 1 < data._size) result += ", ";
@@ -923,8 +925,8 @@ nothrow:
 struct _RCStringData{
 nothrow:
     char* ptr;
-    int _length;
-    int _capacity;
+    size_t _length;
+    size_t _capacity;
 
     @disable this(this); // not copyable
 
@@ -979,7 +981,7 @@ nothrow:
 
     static RCString opCall(string st) {
         auto result = emptyRCString();
-        int len = st.length;
+        size_t len = st.length;
         result.data.ptr = cast(char*) malloc(len+1);
         if(len > 0) strncpy(result.data.ptr, &st[0], len);
         result.data.ptr[len] = 0;
@@ -988,14 +990,14 @@ nothrow:
     }
 
     void opAssign(string rhs) {
-        int len = rhs.length;
+        size_t len = rhs.length;
         ensureCap(len + 1);
         if(len > 0) strncpy(data.ptr, &rhs[0], len);
         data.ptr[len] = 0;
         data._length = len;
     }
 
-    int length() {
+    size_t length() {
         return data._length;
     }
 
@@ -1020,8 +1022,8 @@ nothrow:
     {
         static if (op == "+") {
             auto result = emptyRCString();
-            int len1 = data._length;
-            int len2 = rhs.length;
+            size_t len1 = data._length;
+            size_t len2 = rhs.length;
             result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
             if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
             if(len2 > 0) strncpy(result.data.ptr + len1, &rhs[0], len2);
@@ -1046,8 +1048,8 @@ nothrow:
                 char* cptr = cast(char*) tmp;
                 format!T(cptr, rhs);
 
-                int len1 = data._length;
-                int len2 = strlen(cptr);
+                size_t len1 = data._length;
+                size_t len2 = strlen(cptr);
                 
                 result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
                 if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
@@ -1063,8 +1065,8 @@ nothrow:
 
     void opOpAssign(string op)(string rhs) {
         static if (op == "+") {
-            int len1 = data._length;
-            int len2 = rhs.length;
+            size_t len1 = data._length;
+            size_t len2 = rhs.length;
             ensureCap(len1 + len2 + 1);
             if(len2 > 0) strncpy(data.ptr + len1, &rhs[0], len2);
             data.ptr[len1+len2] = 0;
@@ -1076,8 +1078,8 @@ nothrow:
 
     void opOpAssign(string op)(RCString rhs) {
         static if (op == "+") {
-            int len1 = data._length;
-            int len2 = rhs.length;
+            size_t len1 = data._length;
+            size_t len2 = rhs.length;
             ensureCap(len1 + len2 + 1);
             if(len2 > 0) strncpy(data.ptr + len1, rhs.data.ptr, len2);
             data.ptr[len1+len2] = 0;
@@ -1111,11 +1113,11 @@ nothrow:
         else static assert(0, "Operator "~op~" not implemented");
     }
 
-    RCString subString(int start, int end) {
+    RCString subString(size_t start, size_t end) {
         if(start < 0) start = 0;
         if(end > data._length) end = data._length;
         if(start > end) end = start;
-        int len = end - start;
+        int len = cast(int) (end - start);
 
         auto result = emptyRCString();
         result.data.ptr = cast(char*) malloc(len + 1);
@@ -1132,7 +1134,7 @@ nothrow:
     private int indexOf(const char* ptr) {
         char* pos = strstr(data.ptr, ptr);
         if(pos) {
-            return pos - data.ptr;
+            return cast(int)(pos - data.ptr);
         }
         return -1;
     }
@@ -1140,7 +1142,6 @@ nothrow:
     int indexOf(string st) {
         const char* ptr = &st[0];
         return indexOf(ptr);
-
     }
 
     int indexOf(RCString st) {
@@ -1149,7 +1150,7 @@ nothrow:
 
     private RCList!RCString split(const char* delimiter) {
         auto lst = RCList!RCString();
-        int delimiter_len = strlen(delimiter);
+        size_t delimiter_len = strlen(delimiter);
         char *ptr = data.ptr;
         char *pos;
 
@@ -1158,7 +1159,7 @@ nothrow:
             pos = strstr(ptr, delimiter);
             if(!pos) break;
 
-            int len = pos - ptr;
+            long len = pos - ptr;
             if (len > 0) {
                 lst.add(RCString(cast (string) (ptr[0..len])));
             }
@@ -1166,7 +1167,7 @@ nothrow:
         }
 
         if (ptr  < data.ptr + data._length){
-            int len = data.ptr + data._length - ptr;
+            long len = data.ptr + data._length - ptr;
             lst.add(RCString(cast (string) (ptr[0..len])));
         }
 
