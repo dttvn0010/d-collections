@@ -14,16 +14,17 @@ enum isCopyable(S) = is(typeof(() { S foo = S.init; S copy = foo; } ));
 
 struct _RCStringData{
 nothrow:
-    char* ptr;
+    char* _ptr;
     size_t _length;
     size_t _capacity;
 
     @disable this(this); // not copyable
 
     ~this() {
-        if(ptr) {
-            free(ptr);
-            ptr = null;
+        if(_ptr) {
+            printf("Free RCString\n");
+            free(_ptr);
+            _ptr = null;
         }
     }
 }
@@ -45,8 +46,8 @@ nothrow:
 
     static RCString opCall() {
         auto result = emptyRCString();
-        result.data.ptr = cast(char*) malloc(1);
-        result.data.ptr[0] = 0;
+        result.data._ptr = cast(char*) malloc(1);
+        result.data._ptr[0] = 0;
         result.data._length = 0;
         result.data._capacity = 1;
         return result;
@@ -60,21 +61,21 @@ nothrow:
         while(capacity < new_capacity) {
             capacity += capacity/2 + 8; 
         }
-        if(!data.ptr) {
-            data.ptr = cast(char*) malloc(capacity);
-            memset(data.ptr, 0, capacity);
+        if(!data._ptr) {
+            data._ptr = cast(char*) malloc(capacity);
+            memset(data._ptr, 0, capacity);
         }else {
-            data.ptr = cast(char*) realloc(data.ptr, capacity);
-            memset(data.ptr + data._length, 0, capacity - data._length);
+            data._ptr = cast(char*) realloc(data._ptr, capacity);
+            memset(data._ptr + data._length, 0, capacity - data._length);
         }
     }
 
     static RCString opCall(string st) {
         auto result = emptyRCString();
         size_t len = st.length;
-        result.data.ptr = cast(char*) malloc(len+1);
-        if(len > 0) strncpy(result.data.ptr, &st[0], len);
-        result.data.ptr[len] = 0;
+        result.data._ptr = cast(char*) malloc(len+1);
+        if(len > 0) strncpy(result.data._ptr, &st[0], len);
+        result.data._ptr[len] = 0;
         result.data._length = len;
         return result;
     }
@@ -82,8 +83,8 @@ nothrow:
     void opAssign(string rhs) {
         size_t len = rhs.length;
         ensureCap(len + 1);
-        if(len > 0) strncpy(data.ptr, &rhs[0], len);
-        data.ptr[len] = 0;
+        if(len > 0) strncpy(data._ptr, &rhs[0], len);
+        data._ptr[len] = 0;
         data._length = len;
     }
 
@@ -97,10 +98,10 @@ nothrow:
             auto result = emptyRCString();
             int len1 = data._length;
             int len2 = rhs.data._length;
-            result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
-            if(len2 > 0) strncpy(result.data.ptr + len1, rhs.data.ptr, len2);
-            result.data.ptr[len1+len2] = 0;
+            result.data._ptr = cast(char*) malloc(len1 + len2 + 1);
+            if(len1 > 0) strncpy(result.data._ptr, data._ptr, len1);
+            if(len2 > 0) strncpy(result.data._ptr + len1, rhs.data._ptr, len2);
+            result.data._ptr[len1+len2] = 0;
             result.data._length = len1+len2;
             return result;
         }
@@ -114,10 +115,10 @@ nothrow:
             auto result = emptyRCString();
             size_t len1 = data._length;
             size_t len2 = rhs.length;
-            result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-            if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
-            if(len2 > 0) strncpy(result.data.ptr + len1, &rhs[0], len2);
-            result.data.ptr[len1+len2] = 0;
+            result.data._ptr = cast(char*) malloc(len1 + len2 + 1);
+            if(len1 > 0) strncpy(result.data._ptr, data._ptr, len1);
+            if(len2 > 0) strncpy(result.data._ptr + len1, &rhs[0], len2);
+            result.data._ptr[len1+len2] = 0;
             result.data._length = len1+len2;
             return result;
         }
@@ -141,10 +142,10 @@ nothrow:
                 size_t len1 = data._length;
                 size_t len2 = strlen(cptr);
                 
-                result.data.ptr = cast(char*) malloc(len1 + len2 + 1);
-                if(len1 > 0) strncpy(result.data.ptr, data.ptr, len1);
-                if(len2 > 0) strncpy(result.data.ptr + len1, cptr, len2);
-                result.data.ptr[len1+len2] = 0;
+                result.data._ptr = cast(char*) malloc(len1 + len2 + 1);
+                if(len1 > 0) strncpy(result.data._ptr, data._ptr, len1);
+                if(len2 > 0) strncpy(result.data._ptr + len1, cptr, len2);
+                result.data._ptr[len1+len2] = 0;
                 result.data._length = len1+len2;
                 return result;
             }
@@ -158,8 +159,8 @@ nothrow:
             size_t len1 = data._length;
             size_t len2 = rhs.length;
             ensureCap(len1 + len2 + 1);
-            if(len2 > 0) strncpy(data.ptr + len1, &rhs[0], len2);
-            data.ptr[len1+len2] = 0;
+            if(len2 > 0) strncpy(data._ptr + len1, &rhs[0], len2);
+            data._ptr[len1+len2] = 0;
             data._length = len1 + len2;
         }
 
@@ -171,8 +172,8 @@ nothrow:
             size_t len1 = data._length;
             size_t len2 = rhs.length;
             ensureCap(len1 + len2 + 1);
-            if(len2 > 0) strncpy(data.ptr + len1, rhs.data.ptr, len2);
-            data.ptr[len1+len2] = 0;
+            if(len2 > 0) strncpy(data._ptr + len1, rhs.data._ptr, len2);
+            data._ptr[len1+len2] = 0;
             data._length = len1 + len2;
         }
 
@@ -194,8 +195,8 @@ nothrow:
                 int len1 = data._length;
                 int len2 = strlen(cptr);
                 ensureCap(len1 + len2 + 1);
-                if(len2 > 0) strncpy(data.ptr + len1, cptr, len2);
-                data.ptr[len1+len2] = 0;
+                if(len2 > 0) strncpy(data._ptr + len1, cptr, len2);
+                data._ptr[len1+len2] = 0;
                 data._length = len1 + len2;
             }
         }
@@ -210,9 +211,9 @@ nothrow:
         int len = cast(int) (end - start);
 
         auto result = emptyRCString();
-        result.data.ptr = cast(char*) malloc(len + 1);
-        if(len > 0) strncpy(result.data.ptr, data.ptr + start, len);
-        result.data.ptr[len] = 0;
+        result.data._ptr = cast(char*) malloc(len + 1);
+        if(len > 0) strncpy(result.data._ptr, data._ptr + start, len);
+        result.data._ptr[len] = 0;
         result.data._length = len;
         return result;
     }
@@ -222,9 +223,9 @@ nothrow:
     }
 
     private int indexOf(const char* ptr) {
-        char* pos = strstr(data.ptr, ptr);
+        char* pos = strstr(data._ptr, ptr);
         if(pos) {
-            return cast(int)(pos - data.ptr);
+            return cast(int)(pos - data._ptr);
         }
         return -1;
     }
@@ -235,13 +236,13 @@ nothrow:
     }
 
     int indexOf(RCString st) {
-        return indexOf(st.data.ptr);
+        return indexOf(st.data._ptr);
     }
     
     private RCList!RCString split(const char* delimiter) {
         auto lst = RCList!RCString();
         size_t delimiter_len = strlen(delimiter);
-        char *ptr = data.ptr;
+        char *ptr = data._ptr;
         char *pos;
 
         while (true)
@@ -256,8 +257,8 @@ nothrow:
             ptr = pos + delimiter_len;
         }
 
-        if (ptr  < data.ptr + data._length){
-            int len = cast(int)(data.ptr + data._length - ptr);
+        if (ptr  < data._ptr + data._length){
+            int len = cast(int)(data._ptr + data._length - ptr);
             lst.add(RCString(cast (string) (ptr[0..len])));
         }
 
@@ -269,7 +270,7 @@ nothrow:
     }
 
     RCList!RCString split(RCString st) {
-        return split(st.data.ptr);
+        return split(st.data._ptr);
     }
 
     RCString join(RCList!RCString lst) {
@@ -283,16 +284,16 @@ nothrow:
         }
 
         auto result = emptyRCString();
-        result.data.ptr = cast(char*) malloc(totalLength + 1);
+        result.data._ptr = cast(char*) malloc(totalLength + 1);
 
-        char* ptr = result.data.ptr;
+        char* ptr = result.data._ptr;
 
         foreach(i,st; lst) {
-            memcpy(ptr, st.data.ptr, st.data._length);
+            memcpy(ptr, st.data._ptr, st.data._length);
             ptr += st.data._length;
 
             if(i + 1 < lst.size()) {
-                memcpy(ptr, data.ptr, data._length);
+                memcpy(ptr, data._ptr, data._length);
                 ptr += data._length;
             }            
         }
@@ -303,21 +304,21 @@ nothrow:
     }
 
     hash_t toHash() const nothrow {
-        return hashOf(cast(string)data.ptr[0..data._length]);
+        return hashOf(cast(string)data._ptr[0..data._length]);
     }
 
     bool opEquals(RCString st2){        
-        auto s1 = cast(string) data.ptr[0..data._length];
-        auto s2 = cast(string) st2.data.ptr[0..st2.data._length];
+        auto s1 = cast(string) data._ptr[0..data._length];
+        auto s2 = cast(string) st2.data._ptr[0..st2.data._length];
         return s1 == s2;
     }
 
     void print() {
-        printf("%s", data.ptr);
+        printf("%s", data._ptr);
     }
 
     void printLine() {
-        printf("%s\n", data.ptr);
+        printf("%s\n", data._ptr);
     }
 }
 
@@ -661,17 +662,17 @@ DictItem!(K,V)* newItem(K,V)() {
 
 struct _RCDictData(K, V) {
 nothrow:
-    DictItem!(K,V)** table;
+    DictItem!(K,V)** _table;
     size_t _bucketSize;
     size_t _size;    
 
     @disable this(this); // not copyable
 
     ~this() {
-        if(table) {                
+        if(_table) {                
             printf("Free RCDict\n");
             for(int i = 0; i < _size; i++) {
-                auto ptr = table[i];
+                auto ptr = _table[i];
                 while(ptr != null) {
                     auto tmp = ptr;
                     ptr = ptr.next;
@@ -680,9 +681,9 @@ nothrow:
                     free(tmp);
                 }
             }
-            free(table);
+            free(_table);
         }
-        table = null;
+        _table = null;
         _bucketSize = _size = 0;
     }
 }
@@ -703,8 +704,8 @@ nothrow:
         dict.data._size = 0;
         dict.data._bucketSize = 16;
         size_t allocSize = (DictItem!(K,V)*).sizeof * dict.data._bucketSize;
-        dict.data.table = cast(DictItem!(K,V)**) malloc(allocSize);
-        memset(cast(char*) dict.data.table, 0, allocSize);
+        dict.data._table = cast(DictItem!(K,V)**) malloc(allocSize);
+        memset(cast(char*) dict.data._table, 0, allocSize);
         return dict;
     }
 
@@ -717,7 +718,7 @@ nothrow:
         size_t hash = key.hashOf();
         size_t index = hash % data._bucketSize;
 
-        auto ptr = data.table[index];
+        auto ptr = data._table[index];
 
         while(ptr && ptr.next && ptr.key != key) {
             ptr = ptr.next;
@@ -744,7 +745,7 @@ nothrow:
             if(ptr) {
                 ptr.next = new_ptr;
             }else {
-                data.table[index] = new_ptr;
+                data._table[index] = new_ptr;
             }
         }
     }
@@ -752,7 +753,7 @@ nothrow:
     ref V opIndex(K key) {
         size_t hash = key.hashOf();
         size_t index = hash % data._bucketSize;        
-        auto ptr = data.table[index];
+        auto ptr = data._table[index];
 
         while(ptr != null && ptr.key != key) {
             ptr = ptr.next;
@@ -769,7 +770,7 @@ nothrow:
     bool containsKey(K key) {
         size_t hash = key.hashOf();
         size_t index = hash % data._bucketSize;        
-        auto ptr = data.table[index];
+        auto ptr = data._table[index];
 
         while(ptr != null && ptr.key != key) {
             ptr = ptr.next;
@@ -782,9 +783,9 @@ nothrow:
         size_t index = hash % data._bucketSize;
         bool result;
 
-        if(data.table[index] == null) return;
+        if(data._table[index] == null) return;
 
-        auto ptr = data.table[index];
+        auto ptr = data._table[index];
         DictItem!(K,V)* prev = null;
 
         while(ptr.next != null && ptr.key != key) {
@@ -796,7 +797,7 @@ nothrow:
             if(prev != null) {
                 prev.next = ptr.next;
             }else {
-                data.table[index] = ptr.next;
+                data._table[index] = ptr.next;
             }
             destroy(ptr.key);
             destroy(ptr.value);
@@ -808,11 +809,11 @@ nothrow:
 
     private void _doubleSize() {        
         int itemSize = (DictItem!(K,V)*).sizeof;
-        data.table = cast(DictItem!(K,V)**) realloc(data.table, 2 * itemSize * data._bucketSize);    
-        memset(cast (char*) data.table + data._bucketSize * itemSize, 0, data._bucketSize * itemSize);
+        data._table = cast(DictItem!(K,V)**) realloc(data._table, 2 * itemSize * data._bucketSize);    
+        memset(cast (char*) data._table + data._bucketSize * itemSize, 0, data._bucketSize * itemSize);
 
         for(int i = 0; i < data._bucketSize; i++) {
-            auto ptr = data.table[i];
+            auto ptr = data._table[i];
             DictItem!(K,V)* prev = null;
             DictItem!(K,V)* new_ptr = null;
 
@@ -823,22 +824,29 @@ nothrow:
 
                 if(index == i + data._bucketSize) {
                     if(new_ptr == null) {
-                        data.table[index] = new_ptr = newItem!(K,V)();                        
+                        data._table[index] = new_ptr = newItem!(K,V)();                        
                     }else {
                         new_ptr.next = newItem!(K,V)();
                         new_ptr = new_ptr.next;
                     }
 
                     new_ptr.key = ptr.key;
-                    new_ptr.value = move(ptr.value);
+                    static if(isCopyable!V) {
+                        new_ptr.value = ptr.value;
+                    }else{
+                        new_ptr.value = move(ptr.value);
+                    }
 
                     if(prev == null) {
-                        data.table[i] = next;
+                        data._table[i] = next;
                     }else {
                         prev.next = next;
                     }
 
                     destroy(ptr.key);
+                    static if(isCopyable!V) {
+                        destroy(ptr.value);
+                    }
                     free(ptr);
                 }else {
                     prev = ptr;
@@ -853,7 +861,7 @@ nothrow:
     RCList!K getKeys() {
         auto lst = RCList!K();
         for(int i = 0; i < data._bucketSize;i++) {
-            auto ptr = data.table[i];
+            auto ptr = data._table[i];
             while(ptr != null) {
                 lst.add(ptr.key);
                 ptr = ptr.next;
@@ -866,7 +874,7 @@ nothrow:
         RCList!V getValues() {
             auto lst = RCList!V();
             for(int i = 0; i < data._bucketSize;i++) {
-                auto ptr = data.table[i];
+                auto ptr = data._table[i];
                 while(ptr != null) {
                     lst.add(ptr.value);
                     ptr = ptr.next;
@@ -878,7 +886,7 @@ nothrow:
         RCList!(DictItem!(K,V)) getItems() {
             auto lst = RCList!(DictItem!(K,V))();
             for(int i = 0; i < data._bucketSize;i++) {
-                auto ptr = data.table[i];
+                auto ptr = data._table[i];
                 while(ptr != null) {
                     lst.add(*ptr);
                     ptr = ptr.next;
@@ -891,7 +899,7 @@ nothrow:
         V getOrDefault(K key, V defaultValue) {
             size_t hash = key.hashOf();
             size_t index = hash % data._bucketSize;        
-            auto ptr = data.table[index];
+            auto ptr = data._table[index];
 
             while(ptr != null && ptr.key != key) {
                 ptr = ptr.next;
@@ -902,7 +910,7 @@ nothrow:
         V getOrInsert(K key, V defaultValue) {
             size_t hash = key.hashOf();
             size_t index = hash % data._bucketSize;        
-            auto ptr = data.table[index];
+            auto ptr = data._table[index];
 
             while(ptr && ptr.key != key && ptr.next != null) {
                 ptr = ptr.next;
@@ -919,7 +927,7 @@ nothrow:
                 if(ptr) {
                     ptr.next = new_ptr;
                 }else{
-                    data.table[index] = new_ptr;
+                    data._table[index] = new_ptr;
                 }
 
                 data._size += 1;
@@ -932,7 +940,7 @@ nothrow:
         int result = 0;
 
         for(int i = 0; i < data._bucketSize;i++) {
-            auto ptr = data.table[i];
+            auto ptr = data._table[i];
             while(ptr != null) {
                 result = operations(*ptr);
                 ptr = ptr.next;
@@ -950,7 +958,7 @@ nothrow:
         size_t len;
 
         for(int i = 0; i < data._bucketSize;i++) {
-            auto ptr = data.table[i];
+            auto ptr = data._table[i];
             while(ptr != null) {
                 static if(is(typeof(ptr.key) == RCString)) {
                     result += "'";
@@ -1007,17 +1015,17 @@ RCSetItem!(T)* newRCSetItem(T)(T value) {
 
 struct _RCSetData(T) {
 nothrow:
-    RCSetItem!(T)** table;
+    RCSetItem!(T)** _table;
     size_t _bucketSize;
     size_t _size;    
 
     @disable this(this); // not copyable
 
     ~this() {
-        if(table) {                
+        if(_table) {                
             printf("Free RCSet\n");
             for(int i = 0; i < _size; i++) {
-                auto ptr = table[i];
+                auto ptr = _table[i];
                 while(ptr != null) {
                     auto tmp = ptr;
                     ptr = ptr.next;
@@ -1025,9 +1033,9 @@ nothrow:
                     free(tmp);
                 }
             }
-            free(table);
+            free(_table);
         }
-        table = null;
+        _table = null;
         _bucketSize = _size = 0;
     }
 }
@@ -1048,8 +1056,8 @@ nothrow:
         set.data._size = 0;
         set.data._bucketSize = 16;
         size_t allocSize = (RCSetItem!(T)*).sizeof * set.data._bucketSize;
-        set.data.table = cast(RCSetItem!(T)**) malloc(allocSize);
-        memset(cast(char*) set.data.table, 0, allocSize);
+        set.data._table = cast(RCSetItem!(T)**) malloc(allocSize);
+        memset(cast(char*) set.data._table, 0, allocSize);
         return set;
     }
 
@@ -1078,7 +1086,7 @@ nothrow:
         size_t hash = value.hashOf();
         size_t index = hash % data._bucketSize;
 
-        auto ptr = data.table[index];
+        auto ptr = data._table[index];
 
         while(ptr && ptr.next && ptr.value != value) {
             ptr = ptr.next;
@@ -1090,7 +1098,7 @@ nothrow:
             if(ptr) {
                 ptr.next = new_ptr;
             }else {
-                data.table[index] = new_ptr;
+                data._table[index] = new_ptr;
             }
         }
 
@@ -1099,7 +1107,7 @@ nothrow:
     bool contains(T value) {
         size_t hash = value.hashOf();
         size_t index = hash % data._bucketSize;        
-        auto ptr = data.table[index];
+        auto ptr = data._table[index];
 
         while(ptr != null && ptr.value != value) {
             ptr = ptr.next;
@@ -1112,9 +1120,9 @@ nothrow:
         size_t index = hash % data._bucketSize;
         bool result;
 
-        if(data.table[index] == null) return;
+        if(data._table[index] == null) return;
 
-        auto ptr = data.table[index];
+        auto ptr = data._table[index];
         RCSetItem!(T)* prev = null;
 
         while(ptr.next != null && ptr.value != value) {
@@ -1126,7 +1134,7 @@ nothrow:
             if(prev != null) {
                 prev.next = ptr.next;
             }else {
-                data.table[index] = ptr.next;
+                data._table[index] = ptr.next;
             }
             destroy(ptr.value);
             free(ptr);
@@ -1137,11 +1145,11 @@ nothrow:
 
     private void _doubleSize() {        
         size_t itemSize = (RCSetItem!(T)*).sizeof;
-        data.table = cast(RCSetItem!(T)**) realloc(data.table, 2 * itemSize * data._bucketSize);    
-        memset(cast (char*) data.table + data._bucketSize * itemSize, 0, data._bucketSize * itemSize);
+        data._table = cast(RCSetItem!(T)**) realloc(data._table, 2 * itemSize * data._bucketSize);    
+        memset(cast (char*) data._table + data._bucketSize * itemSize, 0, data._bucketSize * itemSize);
 
         for(int i = 0; i < data._bucketSize; i++) {
-            auto ptr = data.table[i];
+            auto ptr = data._table[i];
             RCSetItem!(T)* prev = null;
             RCSetItem!(T)* new_ptr = null;
 
@@ -1152,14 +1160,14 @@ nothrow:
 
                 if(index == i + data._bucketSize) {
                     if(new_ptr == null) {
-                        data.table[index] = new_ptr = newRCSetItem(ptr.value);
+                        data._table[index] = new_ptr = newRCSetItem(ptr.value);
                     }else {
                         new_ptr.next = newRCSetItem(ptr.value);
                         new_ptr = new_ptr.next;                        
                     }
 
                     if(prev == null) {
-                        data.table[i] = next;
+                        data._table[i] = next;
                     }else {
                         prev.next = next;
                     }
@@ -1179,7 +1187,7 @@ nothrow:
     RCList!T toList() {
         auto lst = RCList!T();
         for(int i = 0; i < data._size;i++) {
-            auto ptr = data.table[i];
+            auto ptr = data._table[i];
             while(ptr != null) {
                 lst.add(ptr.value);
                 ptr = ptr.next;
@@ -1192,7 +1200,7 @@ nothrow:
         int result = 0;
 
         for(int i = 0; i < data._bucketSize;i++) {
-            auto ptr = data.table[i];
+            auto ptr = data._table[i];
             while(ptr != null) {
                 result = operations(ptr.value);
                 ptr = ptr.next;
@@ -1209,7 +1217,7 @@ nothrow:
         char* cptr = cast(char*) tmp;
 
         for(int i = 0; i < data._bucketSize;i++) {
-            auto ptr = data.table[i];
+            auto ptr = data._table[i];
             while(ptr != null) {
                 static if(is(typeof(ptr.value) == RCString)) {
                     result += "'";

@@ -10,7 +10,7 @@ void testDict1() {
     for(int i = 50; i < 70; i++) {
         m[2*i] = i;
     }
-    
+    m[256] = 100;
     auto items = m.getItems();
     
     foreach(item; m) {
@@ -84,18 +84,6 @@ void testList2() {
     }    
 }
 
-/*
-Tuple!(int, RCString) test() {
-    return tuple(2, RCString("2"));
-}
-
-void testTuple() {
-    auto t = test();
-    printf("key=%d, value=", t[0]);
-    t[1].printLine();
-}
-*/
-
 void testSet() {
     int[5] arr = [1, 5, 6, 7, 8];
     auto s = RCSet!int(arr);
@@ -134,12 +122,14 @@ void testString() {
 
 extern(C) int main() {
     testList1();
-    testList2();
+    //testList2();
     testDict1();
     testDict2();
     //testDict3();
     testSet();
     testDictList();
-    testString();
+    //testString();
+    auto st = RCString("1,2,3,4");
+    auto items = st.split(",");
     return 0;
 }
