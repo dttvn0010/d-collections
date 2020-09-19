@@ -239,7 +239,7 @@ nothrow:
         return indexOf(st.data._ptr);
     }
     
-    private RCList!RCString split(const char* delimiter) {
+    private RCList!RCString _split(const char* delimiter) {
         auto lst = RCList!RCString();
         size_t delimiter_len = strlen(delimiter);
         char *ptr = data._ptr;
@@ -266,11 +266,11 @@ nothrow:
     }
 
     RCList!RCString split(string st) {
-        return split(&st[0]);
+        return _split(&st[0]);
     }
 
     RCList!RCString split(RCString st) {
-        return split(st.data._ptr);
+        return _split(st.data._ptr);
     }
 
     RCString join(RCList!RCString lst) {
