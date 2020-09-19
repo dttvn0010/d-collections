@@ -122,13 +122,13 @@ void testString() {
 
 extern(C) int main() {
     testList1();
-    //testList2();
+    testList2();
     testDict1();
     testDict2();
     //testDict3();
     testSet();
     testDictList();
-    //testString();
+    testString();
     auto st = RCString("1,2,3,4");
     auto items = st.split(",");
     return 0;

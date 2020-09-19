@@ -12,7 +12,7 @@ nothrow:
 
 enum isCopyable(S) = is(typeof(() { S foo = S.init; S copy = foo; } ));
 
-struct _RCStringData{
+private struct _RCStringData{
 nothrow:
     char* _ptr;
     size_t _length;
@@ -22,7 +22,7 @@ nothrow:
 
     ~this() {
         if(_ptr) {
-            printf("Free RCString\n");
+            //printf("Free RCString\n");
             free(_ptr);
             _ptr = null;
         }
@@ -37,7 +37,7 @@ nothrow:
         return data.refCountedStore().isInitialized();
     }
 
-    static RCString emptyRCString() {
+    private static RCString _emptyRCString() {
         RCString result;
         auto data = _RCStringData(null, 0, 0);
         result.data = refCounted(move(data));
@@ -45,7 +45,7 @@ nothrow:
     }
 
     static RCString opCall() {
-        auto result = emptyRCString();
+        auto result = _emptyRCString();
         result.data._ptr = cast(char*) malloc(1);
         result.data._ptr[0] = 0;
         result.data._length = 0;
@@ -53,7 +53,7 @@ nothrow:
         return result;
     }
 
-    void ensureCap(size_t new_capacity) {
+    private void _ensureCap(size_t new_capacity) {
         if(new_capacity <= data._capacity) return;
 
         size_t capacity = data._capacity;
@@ -71,7 +71,7 @@ nothrow:
     }
 
     static RCString opCall(string st) {
-        auto result = emptyRCString();
+        auto result = _emptyRCString();
         size_t len = st.length;
         result.data._ptr = cast(char*) malloc(len+1);
         if(len > 0) strncpy(result.data._ptr, &st[0], len);
@@ -82,7 +82,7 @@ nothrow:
 
     void opAssign(string rhs) {
         size_t len = rhs.length;
-        ensureCap(len + 1);
+        _ensureCap(len + 1);
         if(len > 0) strncpy(data._ptr, &rhs[0], len);
         data._ptr[len] = 0;
         data._length = len;
@@ -95,7 +95,7 @@ nothrow:
     RCString opBinary(string op)(RCString rhs)
     {
         static if (op == "+") {
-            auto result = emptyRCString();
+            auto result = _emptyRCString();
             int len1 = data._length;
             int len2 = rhs.data._length;
             result.data._ptr = cast(char*) malloc(len1 + len2 + 1);
@@ -112,7 +112,7 @@ nothrow:
     RCString opBinary(string op)(string rhs)
     {
         static if (op == "+") {
-            auto result = emptyRCString();
+            auto result = _emptyRCString();
             size_t len1 = data._length;
             size_t len2 = rhs.length;
             result.data._ptr = cast(char*) malloc(len1 + len2 + 1);
@@ -158,7 +158,7 @@ nothrow:
         static if (op == "+") {
             size_t len1 = data._length;
             size_t len2 = rhs.length;
-            ensureCap(len1 + len2 + 1);
+            _ensureCap(len1 + len2 + 1);
             if(len2 > 0) strncpy(data._ptr + len1, &rhs[0], len2);
             data._ptr[len1+len2] = 0;
             data._length = len1 + len2;
@@ -171,7 +171,7 @@ nothrow:
         static if (op == "+") {
             size_t len1 = data._length;
             size_t len2 = rhs.length;
-            ensureCap(len1 + len2 + 1);
+            _ensureCap(len1 + len2 + 1);
             if(len2 > 0) strncpy(data._ptr + len1, rhs.data._ptr, len2);
             data._ptr[len1+len2] = 0;
             data._length = len1 + len2;
@@ -194,7 +194,7 @@ nothrow:
 
                 int len1 = data._length;
                 int len2 = strlen(cptr);
-                ensureCap(len1 + len2 + 1);
+                _ensureCap(len1 + len2 + 1);
                 if(len2 > 0) strncpy(data._ptr + len1, cptr, len2);
                 data._ptr[len1+len2] = 0;
                 data._length = len1 + len2;
@@ -210,7 +210,7 @@ nothrow:
         if(start > end) end = start;
         int len = cast(int) (end - start);
 
-        auto result = emptyRCString();
+        auto result = _emptyRCString();
         result.data._ptr = cast(char*) malloc(len + 1);
         if(len > 0) strncpy(result.data._ptr, data._ptr + start, len);
         result.data._ptr[len] = 0;
@@ -283,7 +283,7 @@ nothrow:
             }
         }
 
-        auto result = emptyRCString();
+        auto result = _emptyRCString();
         result.data._ptr = cast(char*) malloc(totalLength + 1);
 
         char* ptr = result.data._ptr;
@@ -322,7 +322,7 @@ nothrow:
     }
 }
 
-struct _RCListData(T) {
+private struct _RCListData(T) {
     T* _items;
     size_t _size;
     size_t _capacity;
@@ -331,7 +331,7 @@ struct _RCListData(T) {
 
     ~this() {
         if(_items) {
-            printf("Free RCList\n");
+            //printf("Free RCList\n");
             for(int i = 0; i < _size; i++) {
                 static if(!is(typeof(_items[0]) == RCString)) {
                     destroy(_items[i]);
@@ -370,7 +370,7 @@ nothrow:
         return opCall(0);
     }
 
-    private void ensureCap(size_t new_capacity) {
+    private void _ensureCap(size_t new_capacity) {
         if(new_capacity < data._capacity) return;
         size_t capacity = data._capacity;
         while(capacity < new_capacity) {
@@ -392,13 +392,13 @@ nothrow:
     }
 
     void resize(size_t size) {
-        ensureCap(size);
+        _ensureCap(size);
         data._size = size;
     }
 
     static if(isCopyable!T) {        
         void add(T item) {
-            ensureCap(1 + data._size);
+            _ensureCap(1 + data._size);
             data._items[data._size] = item;
             data._size += 1;
         }
@@ -416,7 +416,7 @@ nothrow:
         }
     }else {
         void add(T item) {
-            ensureCap(1 + data._size);
+            _ensureCap(1 + data._size);
             data._items[data._size] = move(item);
             data._size += 1;
         }    
@@ -572,7 +572,7 @@ nothrow:
         }
     }
 
-    T[] _view() {
+    private T[] _view() {
         return data._items[0..data._size];
     }
 
@@ -660,7 +660,7 @@ DictItem!(K,V)* newItem(K,V)() {
     return ptr;
 }
 
-struct _RCDictData(K, V) {
+private struct _RCDictData(K, V) {
 nothrow:
     DictItem!(K,V)** _table;
     size_t _bucketSize;
@@ -670,7 +670,7 @@ nothrow:
 
     ~this() {
         if(_table) {                
-            printf("Free RCDict\n");
+            //printf("Free RCDict\n");
             for(int i = 0; i < _size; i++) {
                 auto ptr = _table[i];
                 while(ptr != null) {
@@ -1013,7 +1013,7 @@ RCSetItem!(T)* newRCSetItem(T)(T value) {
     return ptr;
 }
 
-struct _RCSetData(T) {
+private struct _RCSetData(T) {
 nothrow:
     RCSetItem!(T)** _table;
     size_t _bucketSize;
@@ -1023,7 +1023,7 @@ nothrow:
 
     ~this() {
         if(_table) {                
-            printf("Free RCSet\n");
+            //printf("Free RCSet\n");
             for(int i = 0; i < _size; i++) {
                 auto ptr = _table[i];
                 while(ptr != null) {
@@ -1241,7 +1241,7 @@ nothrow:
     }
 }
 
-void format(T)(char* ptr, ref T x) {
+private void format(T)(char* ptr, ref T x) {
     static if(is(T == int) || is(T == short) || is (T == byte)) {
         sprintf(ptr, "%d", cast (int) x);
         return;
