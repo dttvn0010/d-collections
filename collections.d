@@ -570,6 +570,21 @@ nothrow:
             }
             return groups;
         }
+
+        RCDict!(U, RCList!T) groupBy(U)(U delegate(T) nothrow f) {
+            auto groups = RCDict!(U, RCList!T)();
+            RCList null_lst;
+            for(int i = 0; i < data._size; i++) {
+                auto key = f(data._items[i]);
+                auto group = groups.getOrDefault(key, null_lst);
+                if(group.isInitialized()) {
+                    groups[key].add(data._items[i]);
+                }else {
+                    groups[key] = RCList!T();
+                }
+            }
+            return groups;
+        }
     }
 
     private T[] _view() {
