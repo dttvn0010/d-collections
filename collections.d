@@ -364,6 +364,8 @@ private struct _RCListData(T) {
 struct RCList(T) {
 nothrow:    
     private RefCounted!(_RCListData!T, RefCountedAutoInitialize.no) _data;
+    
+    @disable hash_t toHash();
 
     bool isInitialized() {
         return _data.refCountedStore().isInitialized();
@@ -787,6 +789,8 @@ nothrow:
 
     private RefCounted!(_RCDictData!(K,V), RefCountedAutoInitialize.no) _data;
 
+    @disable hash_t toHash();
+    
     bool isInitialized() {
         return _data.refCountedStore().isInitialized();
     }
@@ -1135,6 +1139,8 @@ public struct RCSet(T) {
 nothrow:
     private RCDict!(T, int) _dict;
    
+    @disable hash_t toHash();
+
     bool isInitialized() {
         return _dict.isInitialized();
     }
