@@ -419,9 +419,12 @@ nothrow:
         }
 
         void remove(int index) {
-            if(index < data._size) {
-                destroy(data._items[index]);
+            if(cast(uint) index >= data._size) {
+                printf("RCList index %d is out of range %d", cast(int) index, cast(int) data._size);
+                exit(0);
             }
+            
+            destroy(data._items[index]);
 
             for(int i = index; i < data._size - 1; i++) {
                 data._items[i] = data._items[i+1];
@@ -437,9 +440,12 @@ nothrow:
         }    
 
         void remove(int index) {
-            if(index < data._size) {
-                destroy(data._items[index]);
+        	if(cast(uint) index >= data._size) {
+                printf("RCList index %d is out of range %d", cast(int) index, cast(int) data._size);
+                exit(0);
             }
+            
+            destroy(data._items[index]);
 
             for(int i = index; i < data._size - 1; i++) {
                 data._items[i] = move(data._items[i+1]);
@@ -837,6 +843,24 @@ nothrow:
             }
         }
     }
+    
+    private void _printKeyNotFoundError(K)(K key) {
+    	char[1024] tmp;
+        char* cptr = cast(char*) tmp;
+        
+    	printf("RCDict key not found error: ");
+    	
+    	static if(is(typeof(key) == RCString)) {
+            key.print();
+        }
+        else static if (is(typeof(key.toRCString()) == RCString)) {
+            key.toRCString().print();
+        }else {
+            format!K(cptr, key);
+            printf("%s", cptr);
+        }
+        printf("\n");
+    }
 
     ref V opIndex(K key) {
         size_t hash = key.hashOf();
@@ -848,7 +872,7 @@ nothrow:
         }
 
         if(!ptr) {
-            printf("Fatal error: RCDict key not found \n");
+            _printKeyNotFoundError!K(key);
             exit(0);
         }
 
@@ -865,14 +889,15 @@ nothrow:
         }
         return ptr != null;
     }
-
+    
     void remove(K key) {
+        
         size_t hash = key.hashOf();
         size_t index = hash % data._bucketSize;
         bool result;
-
-        if(data._table[index] == null) return;
-
+		
+		if(data._table[index] == null) return;
+		
         auto ptr = data._table[index];
         DictItem!(K,V)* prev = null;
 
@@ -891,7 +916,6 @@ nothrow:
             destroy(ptr.value);
             free(ptr);
             data._size -= 1;
-
         }
     }
 
@@ -1222,7 +1246,7 @@ nothrow:
         }
         return ptr != null;
     }
-
+    
     void remove(T value) {
         size_t hash = value.hashOf();
         size_t index = hash % data._bucketSize;
@@ -1247,7 +1271,6 @@ nothrow:
             destroy(ptr.value);
             free(ptr);
             data._size -= 1;
-
         }
     }
 
