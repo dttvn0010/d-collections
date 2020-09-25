@@ -31,7 +31,7 @@ nothrow:
 
 struct RCString {
 nothrow:
-    RefCounted!(_RCStringData, RefCountedAutoInitialize.no) data;
+    private RefCounted!(_RCStringData, RefCountedAutoInitialize.no) data;
 
     bool isInitialized() {
         return data.refCountedStore().isInitialized();
@@ -363,7 +363,7 @@ private struct _RCListData(T) {
 
 struct RCList(T) {
 nothrow:    
-    RefCounted!(_RCListData!T, RefCountedAutoInitialize.no) data;
+    private RefCounted!(_RCListData!T, RefCountedAutoInitialize.no) data;
 
     bool isInitialized() {
         return data.refCountedStore().isInitialized();
@@ -785,7 +785,7 @@ nothrow:
 public struct RCDict(K, V) {
 nothrow:
 
-    RefCounted!(_RCDictData!(K,V), RefCountedAutoInitialize.no) data;
+    private RefCounted!(_RCDictData!(K,V), RefCountedAutoInitialize.no) data;
 
     bool isInitialized() {
         return data.refCountedStore().isInitialized();
@@ -1131,72 +1131,24 @@ unittest {
     assert(m[s + "2"] == 100);
 }
 
-struct RCSetItem(T) {
-    T value;
-    RCSetItem* next;
-}
-
-RCSetItem!(T)* newRCSetItem(T)(T value) {
-    int allocSize = RCSetItem!(T).sizeof;
-    auto ptr = cast(RCSetItem!(T)*) malloc(allocSize);
-    memset(cast(char*) ptr, 0, allocSize);
-    ptr.value = value;
-    ptr.next = null;
-    return ptr;
-}
-
-private struct _RCSetData(T) {
-nothrow:
-    RCSetItem!(T)** _table;
-    size_t _bucketSize;
-    size_t _size;    
-
-    @disable this(this); // not copyable
-
-    ~this() {
-        if(_table) {                
-            //printf("Free RCSet\n");
-            for(int i = 0; i < _size; i++) {
-                auto ptr = _table[i];
-                while(ptr != null) {
-                    auto tmp = ptr;
-                    ptr = ptr.next;
-                    destroy(tmp.value);
-                    free(tmp);
-                }
-            }
-            free(_table);
-        }
-        _table = null;
-        _bucketSize = _size = 0;
-    }
-}
-
-
 public struct RCSet(T) {
 nothrow:
-    RefCounted!(_RCSetData!(T), RefCountedAutoInitialize.no) data;
-
+    private RCDict!(T, int) _dict;
+   
     bool isInitialized() {
-        return data.refCountedStore().isInitialized();
+        return _dict.isInitialized();
     }
 
     static RCSet opCall() {
         RCSet set;
-        auto data = _RCSetData!(T)(null, 0, 0);
-        set.data = refCounted(move(data));
-        set.data._size = 0;
-        set.data._bucketSize = 16;
-        size_t allocSize = (RCSetItem!(T)*).sizeof * set.data._bucketSize;
-        set.data._table = cast(RCSetItem!(T)**) malloc(allocSize);
-        memset(cast(char*) set.data._table, 0, allocSize);
+        set._dict = RCDict!(T, int)();
         return set;
     }
 
     static RCSet opCall(T[] arr) {
         auto set = RCSet();
         foreach(x; arr) {
-            set.add(x);
+            set._dict[x] = 1;
         }
         return set;
     }
@@ -1204,145 +1156,39 @@ nothrow:
     static RCSet opCall(RCList!T lst) {
         auto set = RCSet();
         foreach(x; lst) {
-            set.add(x);
+            set._dict[x] = 1;
         }
         return set;
     }
 
     void add(T value) {
-
-        if(data._size >= data._bucketSize >> 1) {
-            _doubleSize();
-        }
-
-        size_t hash = value.hashOf();
-        size_t index = hash % data._bucketSize;
-
-        auto ptr = data._table[index];
-
-        while(ptr && ptr.next && ptr.value != value) {
-            ptr = ptr.next;
-        }
-
-        if(!ptr || ptr.value != value) {
-            auto new_ptr = newRCSetItem(value);
-            data._size += 1;
-            if(ptr) {
-                ptr.next = new_ptr;
-            }else {
-                data._table[index] = new_ptr;
-            }
-        }
-
+        _dict[value] = 1;
     }
 
     bool contains(T value) {
-        size_t hash = value.hashOf();
-        size_t index = hash % data._bucketSize;        
-        auto ptr = data._table[index];
-
-        while(ptr != null && ptr.value != value) {
-            ptr = ptr.next;
-        }
-        return ptr != null;
+        return _dict.containsKey(value);
     }
     
     void remove(T value) {
-        size_t hash = value.hashOf();
-        size_t index = hash % data._bucketSize;
-        bool result;
-
-        if(data._table[index] == null) return;
-
-        auto ptr = data._table[index];
-        RCSetItem!(T)* prev = null;
-
-        while(ptr.next != null && ptr.value != value) {
-            prev = ptr;
-            ptr = ptr.next;
-        }
-
-        if(ptr.value == value) {
-            if(prev != null) {
-                prev.next = ptr.next;
-            }else {
-                data._table[index] = ptr.next;
-            }
-            destroy(ptr.value);
-            free(ptr);
-            data._size -= 1;
-        }
-    }
-
-    private void _doubleSize() {        
-        size_t itemSize = (RCSetItem!(T)*).sizeof;
-        data._table = cast(RCSetItem!(T)**) realloc(data._table, 2 * itemSize * data._bucketSize);    
-        memset(cast (char*) data._table + data._bucketSize * itemSize, 0, data._bucketSize * itemSize);
-
-        for(int i = 0; i < data._bucketSize; i++) {
-            auto ptr = data._table[i];
-            RCSetItem!(T)* prev = null;
-            RCSetItem!(T)* new_ptr = null;
-
-            while(ptr != null) {
-                size_t hash = ptr.value.hashOf();                
-                size_t index = hash % (2* data._bucketSize);
-                auto next = ptr.next;
-
-                if(index == i + data._bucketSize) {
-                    if(new_ptr == null) {
-                        data._table[index] = new_ptr = newRCSetItem(ptr.value);
-                    }else {
-                        new_ptr.next = newRCSetItem(ptr.value);
-                        new_ptr = new_ptr.next;                        
-                    }
-
-                    if(prev == null) {
-                        data._table[i] = next;
-                    }else {
-                        prev.next = next;
-                    }
-
-                    destroy(ptr.value);
-                    free(ptr);                    
-                }else {
-                    prev = ptr;
-                }
-
-                ptr = next;
-            }
-        }
-        data._bucketSize *= 2;
+        _dict.remove(value);
     }
 
     RCList!T toList() {
-        auto lst = RCList!T();
-        for(int i = 0; i < data._size;i++) {
-            auto ptr = data._table[i];
-            while(ptr != null) {
-                lst.add(ptr.value);
-                ptr = ptr.next;
-            }
-        }
-        return lst;
+        return _dict.getKeys();
     }
 
     int opApply(int delegate(ref T) nothrow operations) {
         int result = 0;
 
-        for(int i = 0; i < data._bucketSize;i++) {
-            auto ptr = data._table[i];
-            while(ptr != null) {
-                result = operations(ptr.value);
-                ptr = ptr.next;
-            }
+        foreach(ref item; _dict) {
+            result = operations(item.key);
         }
 
         return result;
     }
 
     size_t size() {
-        return data._size;
+        return _dict.size();
     }
 
     RCString toRCString() {
@@ -1350,25 +1196,22 @@ nothrow:
         auto result = RCString("{");
         int count = 0;
         char* cptr = cast(char*) tmp;
+        auto sz = size();
 
-        for(int i = 0; i < data._bucketSize;i++) {
-            auto ptr = data._table[i];
-            while(ptr != null) {
-                static if(is(typeof(ptr.value) == RCString)) {
-                    result += "'";
-                    result += ptr.value;
-                    result += "'";
-                }else static if (is(typeof(ptr.value.toRCString()) == RCString)) {
-                    result += ptr.value.toRCString();
-                }else {
-                    format!T(cptr, ptr.value);
-                    size_t len = strlen(cptr);
-                    result += cast(string) tmp[0..len];
-                }
-                if(count + 1 < data._size) result += ", ";
-                count += 1;
-                ptr = ptr.next;
+        foreach(ref item; _dict) {
+            static if(is(typeof(item.key) == RCString)) {
+                result += "'";
+                result += item.key;
+                result += "'";
+            }else static if (is(typeof(item.key.toRCString()) == RCString)) {
+                result += item.key.toRCString();
+            }else {
+                format!T(cptr, item.key);
+                size_t len = strlen(cptr);
+                result += cast(string) tmp[0..len];
             }
+            if(count + 1 < sz) result += ", ";
+            count += 1;
         }
 
         result += "}";

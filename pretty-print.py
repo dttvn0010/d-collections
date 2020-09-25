@@ -79,31 +79,10 @@ class RCDictDataPrinter(object):
         
         return lst
 
-class RCSetDataPrinter(object):
-    def __init__(self, val):
-        self.val = val
-
-    def children(self):        
-        table = self.val['_table']
-        bucketSize = self.val['_bucketSize']
-
-        if not table or not bucketSize:
-            return get_default_children(self.val)
-
-        lst = []
-        for i in range(bucketSize):
-            ptr = table[i]
-            while ptr:                    
-                lst.append(('%s' % ptr['value'], ''))
-                ptr = ptr['next']
-        
-        return lst
-
 def build_pretty_printer():
     pp = gdb.printing.RegexpCollectionPrettyPrinter("prettybash")    
     pp.add_printer('RCListData', 'RCListData', RCListDataPrinter)    
     pp.add_printer('RCDictData', 'RCDictData', RCDictDataPrinter)    
-    pp.add_printer('RCSetData', 'RCSetData', RCSetDataPrinter)    
     pp.add_printer('RCList', 'RCList', RCPrinter)    
     pp.add_printer('RCDict', 'RCDict', RCPrinter)    
     pp.add_printer('RCSet', 'RCSet', RCPrinter)
