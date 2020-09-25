@@ -5,7 +5,7 @@ class RCStringPrinter(object):
         self.val = val
 
     def to_string(self):        
-        _refCounted = self.val['data']['_refCounted']
+        _refCounted = self.val['_data']['_refCounted']
 
         if not _refCounted:
             return "Undefined"
@@ -29,7 +29,7 @@ class RCPrinter(object):
 
     def children(self):        
 
-        _refCounted = self.val['data']['_refCounted']
+        _refCounted = self.val['_data']['_refCounted']
 
         if not _refCounted:
             return get_default_children(self.val)
@@ -45,6 +45,30 @@ class RCPrinter(object):
 
         return [('data', _payload), ('size', _payload['_size'])]
         
+class RCSetPrinter(object):
+    def __init__(self, val):
+        self.val = val
+
+    def children(self):
+        _dict = self.val['_dict']
+        if not _dict:
+            return get_default_children(self.val)
+
+        _refCounted = _dict['_data']['_refCounted']
+
+        if not _refCounted:
+            return get_default_children(self.val)
+
+        _store = _refCounted['_store']
+        if not _store:
+            return get_default_children(self.val)
+        
+        _payload = _store['_payload']
+
+        if not _payload:
+            return get_default_children(self.val)
+
+        return [('data', _payload), ('size', _payload['_size'])]
 
 class RCListDataPrinter(object):
     def __init__(self, val):
@@ -85,7 +109,7 @@ def build_pretty_printer():
     pp.add_printer('RCDictData', 'RCDictData', RCDictDataPrinter)    
     pp.add_printer('RCList', 'RCList', RCPrinter)    
     pp.add_printer('RCDict', 'RCDict', RCPrinter)    
-    pp.add_printer('RCSet', 'RCSet', RCPrinter)
+    pp.add_printer('RCSet', 'RCSet', RCSetPrinter)
     pp.add_printer('RCString', 'RCString', RCStringPrinter)
     
     return pp
