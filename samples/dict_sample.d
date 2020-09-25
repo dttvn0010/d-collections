@@ -7,7 +7,6 @@ void test1() {
         m[2*i] = i;
     }
     m[256] = 100;
-    auto items = m.getItems();
     
     foreach(item; m) {
         printf("%d --> %d\n", item.key, item.value);
