@@ -313,12 +313,27 @@ nothrow:
         return s1 == s2;
     }
 
+    bool opEquals(string st2){        
+        auto s1 = cast(string) data._ptr[0..data._length];
+        return s1 == st2;
+    }
+
     void print() {
         printf("%s", data._ptr);
     }
 
     void printLine() {
         printf("%s\n", data._ptr);
+    }
+
+    unittest {
+        auto items = RCString("1,2,3,4").split(",");        
+        assert(RCString("-").join(items) == "1-2-3-4");
+        auto st = RCString("Hello world");
+        assert(st.indexOf("123") == -1);
+        assert(st.indexOf("world") == 6);
+        assert(st.subString(6, 8) == "wo");
+        assert(st.subString(6) == "world");
     }
 }
 
@@ -388,7 +403,7 @@ nothrow:
     }
 
     size_t size() {
-        return data._items ? data._size : 0;
+        return data._size;
     }
 
     void resize(size_t size) {
@@ -562,11 +577,11 @@ nothrow:
             for(int i = 0; i < data._size; i++) {
                 auto key = f(data._items[i]);
                 auto group = groups.getOrDefault(key, null_lst);
-                if(group.isInitialized()) {
-                    groups[key].add(data._items[i]);
-                }else {
-                    groups[key] = RCList!T();
+                if(!group.isInitialized()) {
+                    group = RCList!T();
+                    groups[key] = group;
                 }
+                group.add(data._items[i]);
             }
             return groups;
         }
@@ -577,11 +592,11 @@ nothrow:
             for(int i = 0; i < data._size; i++) {
                 auto key = f(data._items[i]);
                 auto group = groups.getOrDefault(key, null_lst);
-                if(group.isInitialized()) {
-                    groups[key].add(data._items[i]);
-                }else {
-                    groups[key] = RCList!T();
+                if(!group.isInitialized()) {
+                    group = RCList!T();
+                    groups[key] = group;
                 }
+                group.add(data._items[i]);
             }
             return groups;
         }
@@ -632,8 +647,8 @@ nothrow:
     }
 
     void sort(alias lt= "a < b")() { 
-        if(data && data._items) {
-            _toRange().sort!lt();
+        if(data._items) {
+            _view().sort!lt();
         }
     }
 
@@ -659,6 +674,64 @@ nothrow:
         result += "]";
         return result;
     }
+}
+
+unittest {
+    int[5] arr = [2,3,1,5,0];
+    auto lst = RCList!int(arr);    
+    lst.sort();
+    assert(lst[0] == 0 && lst[1] == 1 && lst[2] == 2 && lst[3] == 3 && lst[4] == 5);
+
+    lst = lst.filter(x => x > 1).map(x => x*x);
+    auto llst = RCList!(RCList!int)();
+    llst.add(lst);
+
+    foreach(ref x; llst[0]) {
+        x += 1;
+    }
+
+    foreach(i, x; llst[0]) {
+        if(i == 0) assert(x == 5);
+        if(i == 1) assert(x == 10);
+        if(i == 2) assert(x == 26);
+    }
+}
+
+unittest {
+    auto arr = RCList!int();
+    for(int i = 0; i < 100; i++) {
+        arr.add(i);
+    }
+    auto groups = arr.groupBy(x => x%4);
+    foreach(entry; groups) {        
+        auto key = entry.key;
+        auto value = entry.value;
+
+        if(key == 0) {
+            assert(value[0] == 0);
+            assert(value[1] == 4);
+            assert(value[23] == 92);
+            assert(value[24] == 96);
+        }
+        if(key == 1) {
+            assert(value[0] == 1);
+            assert(value[1] == 5);
+            assert(value[23] == 93);
+            assert(value[24] == 97);
+        }
+        if(key == 2) {
+            assert(value[0] == 2);
+            assert(value[1] == 6);
+            assert(value[23] == 94);
+            assert(value[24] == 98);
+        }
+        if(key == 3) {
+            assert(value[0] == 3);
+            assert(value[1] == 7);
+            assert(value[23] == 95);
+            assert(value[24] == 99);
+        }        
+    }    
 }
 
 struct DictItem(K,V) {
@@ -965,6 +1038,10 @@ nothrow:
         return result;
     }
 
+    size_t size() {
+        return data._size;
+    }
+
     RCString toRCString() {
         auto result = RCString("{");
         int count = 0;
@@ -1012,6 +1089,22 @@ nothrow:
         result += "}";
         return result;
     }
+}
+
+unittest {
+    auto m = RCDict!(int, int)();
+    for(int i = 50; i < 70; i++) {
+        m[2*i] = i;
+    }
+    m[256] = 128;
+    assert(m[100] == 50 && m[110] == 55 && m[120] == 60 && m[128] == 64 && m[256] == 128);
+}
+
+unittest {
+    auto m = RCDict!(RCString, int)();    
+    m[RCString("12")] = 100;
+    auto s = RCString("1");
+    assert(m[s + "2"] == 100);
 }
 
 struct RCSetItem(T) {
@@ -1225,6 +1318,10 @@ nothrow:
         return result;
     }
 
+    size_t size() {
+        return data._size;
+    }
+
     RCString toRCString() {
         char[1024] tmp;
         auto result = RCString("{");
@@ -1254,6 +1351,20 @@ nothrow:
         result += "}";
         return result;
     }
+}
+
+unittest {
+    int[5] arr = [1, 5, 6, 7, 8];
+    auto s = RCSet!int(arr);
+    s.add(1);
+    s.add(2);
+    s.add(3);
+    s.add(2);
+    s.add(1);
+    assert(s.size() == 7);
+    assert(s.contains(1) && s.contains(2) && s.contains(3) && s.contains(5) 
+                        && s.contains(6) && s.contains(7) && s.contains(8));
+    assert(!s.contains(4));
 }
 
 private void format(T)(char* ptr, ref T x) {
