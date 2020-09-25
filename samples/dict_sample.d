@@ -3,14 +3,17 @@ import collections;
 
 void test1() {
     auto m = RCDict!(int, int)();
+    
     for(int i = 50; i < 70; i++) {
         m[2*i] = i;
     }
+    
     m[256] = 100;
     
     foreach(item; m) {
         printf("%d --> %d\n", item.key, item.value);
     }
+    
     m.toRCString().printLine();
 }
 

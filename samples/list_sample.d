@@ -27,10 +27,13 @@ void test1() {
 
 void test2() {
     auto arr = RCList!int();
+    
     for(int i = 0; i < 100; i++) {
         arr.add(i);
     }
+    
     auto groups = arr.groupBy(x => x%4);
+    
     foreach(entry; groups) {
         printf("Key=%d : ", entry.key);
         foreach(x; entry.value)printf("%d ", x);
