@@ -660,12 +660,13 @@ nothrow:
 
         return lst;
     }
-    
-    void sort(alias lt= "a < b")() { 
-        _view().sort!lt();
-    }
+
 
     static if(isOrderingComparable!T) {
+
+        void sort(alias lt= "a < b")() { 
+            _view().sort!lt();
+        }
 
         private void _swap(int* indexes, int i, int j) {
             int tmp = indexes[i];
