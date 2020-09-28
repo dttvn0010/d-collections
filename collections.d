@@ -441,7 +441,7 @@ nothrow:
         }    
 
         void remove(int index) {
-        	if(cast(uint) index >= _data._size) {
+            if(cast(uint) index >= _data._size) {
                 printf("RCList index %d is out of range %d", cast(int) index, cast(int) _data._size);
                 exit(0);
             }
@@ -660,7 +660,7 @@ nothrow:
 
         return lst;
     }
-
+    
     void sort(alias lt= "a < b")() { 
         _view().sort!lt();
     }
@@ -909,12 +909,12 @@ nothrow:
     }
     
     private void _printKeyNotFoundError(K)(K key) {
-    	char[1024] tmp;
+        char[1024] tmp;
         char* cptr = cast(char*) tmp;
         
-    	printf("RCDict key not found error: ");
-    	
-    	static if(is(typeof(key) == RCString)) {
+        printf("RCDict key not found error: ");
+        
+        static if(is(typeof(key) == RCString)) {
             key.print();
         }
         else static if (is(typeof(key.toRCString()) == RCString)) {
@@ -959,9 +959,9 @@ nothrow:
         size_t hash = key.hashOf();
         size_t index = hash % _data._bucketSize;
         bool result;
-		
-		if(_data._table[index] == null) return;
-		
+        
+        if(_data._table[index] == null) return;
+        
         auto ptr = _data._table[index];
         DictItem!(K,V)* prev = null;
 

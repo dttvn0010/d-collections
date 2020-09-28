@@ -3,7 +3,7 @@ import collections;
 
 extern(C) int main() 
 {
-	int[5] arr = [1, 5, 6, 7, 8];
+    int[5] arr = [1, 5, 6, 7, 8];
     auto s = RCSet!int(arr);
     
     s.add(1);

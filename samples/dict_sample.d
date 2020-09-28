@@ -26,7 +26,7 @@ void test2() {
 
 extern(C) int main() 
 {
-	test1();
-	test2();
-	return 0;
+    test1();
+    test2();
+    return 0;
 }
