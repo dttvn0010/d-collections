@@ -665,7 +665,7 @@ nothrow:
         _view().sort!lt();
     }
 
-    static if(isOrderingComparable!T && isCopyable!T) {
+    static if(isOrderingComparable!T) {
 
         private void _swap(int* indexes, int i, int j) {
             int tmp = indexes[i];
@@ -673,17 +673,14 @@ nothrow:
             indexes[j] = tmp;  
         }
 
-        private int _partition(int* indexes, T* values, bool delegate(T, T) nothrow lt_func, int low, int high)  
-        {  
+        private int _partition(int* indexes, T* values, bool delegate(T, T) nothrow lt_func, int low, int high) {  
             int pivot = values[indexes[high]];
             int i = (low - 1);
           
-            for (int j = low; j <= high - 1; j++)  
-            {
+            for (int j = low; j <= high - 1; j++) {
                 bool lt = lt_func != null? lt_func(values[indexes[j]], pivot) : (values[indexes[j]] < pivot);
 
-                if (lt)  
-                {  
+                if (lt) {  
                     i++;
                     _swap(indexes, i, j);               
                 }  
