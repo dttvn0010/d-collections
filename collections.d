@@ -5,12 +5,11 @@ import core.stdc.string;
 import std.algorithm;
 import std.typecons;
 import std.algorithm.mutation : move;
+import std.traits: isCopyable, isOrderingComparable;
 
 //version = noboundcheck;
 
 nothrow:
-
-enum isCopyable(S) = is(typeof(() { S foo = S.init; S copy = foo; } ));
 
 private struct _RCStringData{
 nothrow:
@@ -371,7 +370,7 @@ nothrow:
         return _data.refCountedStore().isInitialized();
     }
 
-    static RCList opCall(int sz) {
+    static RCList opCall(size_t sz) {
         RCList lst;
         auto data = _RCListData!T(null, 0, 0);
         lst._data = refCounted(move(data));
@@ -663,8 +662,56 @@ nothrow:
     }
 
     void sort(alias lt= "a < b")() { 
-        if(_data._items) {
-            _view().sort!lt();
+        _view().sort!lt();
+    }
+
+    static if(isOrderingComparable!T && isCopyable!T) {
+
+        private void _swap(int* indexes, int i, int j) {
+            int tmp = indexes[i];
+            indexes[i] = indexes[j];
+            indexes[j] = tmp;  
+        }
+
+        private int _partition(int* indexes, T* values, bool delegate(T, T) nothrow lt_func, int low, int high)  
+        {  
+            int pivot = values[indexes[high]];
+            int i = (low - 1);
+          
+            for (int j = low; j <= high - 1; j++)  
+            {
+                bool lt = lt_func != null? lt_func(values[indexes[j]], pivot) : (values[indexes[j]] < pivot);
+
+                if (lt)  
+                {  
+                    i++;
+                    _swap(indexes, i, j);               
+                }  
+            }  
+            _swap(indexes, i + 1, high);
+            return (i + 1);  
+        }  
+
+        private void _qsort(int* indexes, T* values, bool delegate(T, T) nothrow lt_func, int low, int high) {
+            if(low < high) {
+                int pi = _partition(indexes, values, lt_func, low, high); 
+                _qsort(indexes, values, lt_func, low, pi - 1);  
+                _qsort(indexes, values, lt_func, pi + 1, high);  
+            }
+        }
+
+        RCList!int argsort(bool delegate(T, T) nothrow lt_func=null) { 
+            auto indexes = RCList!int(_data._size);
+
+            auto indexes_ptr = indexes._data._items;
+
+            for(int i = 0; i < _data._size; i++) {
+                indexes_ptr[i] = i;
+            }
+
+            _qsort(indexes_ptr, _data._items, lt_func, 0, cast(int)(_data._size - 1));
+
+            return indexes;
         }
     }
 
@@ -696,6 +743,10 @@ unittest {
 
     int[5] arr = [2,3,1,5,0];
     auto lst = RCList!int(arr);    
+
+    auto indexes = lst.argsort();
+    assert(indexes[0] == 4 && indexes[1] == 2 && indexes[2] == 0 && indexes[3] == 1 && indexes[4] == 3);
+
     lst.sort();
     assert(lst[0] == 0 && lst[1] == 1 && lst[2] == 2 && lst[3] == 3 && lst[4] == 5);
 

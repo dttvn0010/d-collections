@@ -4,9 +4,16 @@ import collections;
 void test1() {
     int[5] arr = [2,3,1,5,0];
     auto lst = RCList!int(arr);    
-    
-    lst.sort();
 
+    printf("Original list: ");
+    lst.toRCString.printLine();
+    
+    auto indexes = lst.argsort();
+    printf("Sorted indexes: ");
+    indexes.toRCString.printLine();
+
+    lst.sort();
+    printf("Sorted list: ");
     lst.toRCString().printLine();
 
     auto sum = lst.reduce((x, y) => x + y);
