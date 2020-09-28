@@ -4,17 +4,19 @@ import collections;
 void test1() {
     int[5] arr = [2,3,1,5,0];
     auto lst = RCList!int(arr);    
+    
     lst.sort();
 
-    auto st = lst.toRCString();
-    st.printLine();
+    lst.toRCString().printLine();
+
+    auto sum = lst.reduce((x, y) => x + y);
+    printf("Sum: %d\n", sum);
 
     lst = lst.filter(x => x > 1).map(x => x*x);
     auto llst = RCList!(RCList!int)();
     llst.add(lst);
 
-    st = llst.toRCString();
-    st.printLine();
+    llst.toRCString().printLine();
 
     foreach(ref x; llst[0]) {
         x += 1;

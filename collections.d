@@ -608,6 +608,14 @@ nothrow:
             }
             return groups;
         }
+
+        T reduce(T delegate(T, T) nothrow f, T init=T.init) {
+            T acc = init;
+            for(int i = 0; i < _data._size; i++) {
+                acc = f(acc, _data._items[i]);
+            }
+            return acc;
+        }
     }
 
     private T[] _view() {
@@ -684,11 +692,15 @@ nothrow:
     }
 }
 
-unittest {
+unittest {    
+
     int[5] arr = [2,3,1,5,0];
     auto lst = RCList!int(arr);    
     lst.sort();
     assert(lst[0] == 0 && lst[1] == 1 && lst[2] == 2 && lst[3] == 3 && lst[4] == 5);
+
+    auto sum = lst.reduce((x, y) => x + y);
+    assert(sum == 11);
 
     lst = lst.filter(x => x > 1).map(x => x*x);
     auto llst = RCList!(RCList!int)();
