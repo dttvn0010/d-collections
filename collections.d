@@ -828,7 +828,7 @@ nothrow:
     ~this() {
         if(_table) {                
             //printf("Free RCDict\n");
-            for(int i = 0; i < _size; i++) {
+            for(int i = 0; i < _bucketSize; i++) {
                 auto ptr = _table[i];
                 while(ptr != null) {
                     auto tmp = ptr;
@@ -1099,7 +1099,6 @@ nothrow:
                 auto new_ptr = newItem!(K,V)();
                 new_ptr.key = key;
                 new_ptr.value = defaultValue;
-                _data._size += 1;
 
                 if(ptr) {
                     ptr.next = new_ptr;
