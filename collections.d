@@ -1,4 +1,4 @@
-module collections;
+module RC;
 import core.stdc.stdio;
 import core.stdc.stdlib;
 import core.stdc.string;
@@ -11,7 +11,7 @@ import std.traits: isCopyable, isOrderingComparable;
 
 nothrow:
 
-private struct _RCStringData{
+private struct _StringData{
 nothrow:
     char* _ptr;
     size_t _length;
@@ -21,30 +21,30 @@ nothrow:
 
     ~this() {
         if(_ptr) {
-            //printf("Free RCString\n");
+            //printf("Free String\n");
             free(_ptr);
             _ptr = null;
         }
     }
 }
 
-struct RCString {
+struct String {
 nothrow:
-    private RefCounted!(_RCStringData, RefCountedAutoInitialize.no) _data;
+    private RefCounted!(_StringData, RefCountedAutoInitialize.no) _data;
 
     bool isInitialized() {
         return _data.refCountedStore().isInitialized();
     }
 
-    private static RCString _emptyRCString() {
-        RCString result;
-        auto data = _RCStringData(null, 0, 0);
+    private static String _emptyString() {
+        String result;
+        auto data = _StringData(null, 0, 0);
         result._data = refCounted(move(data));
         return result;
     }
 
-    static RCString opCall() {
-        auto result = _emptyRCString();
+    static String opCall() {
+        auto result = _emptyString();
         result._data._ptr = cast(char*) malloc(1);
         result._data._ptr[0] = 0;
         result._data._length = 0;
@@ -69,8 +69,8 @@ nothrow:
         }
     }
 
-    static RCString opCall(string st) {
-        auto result = _emptyRCString();
+    static String opCall(string st) {
+        auto result = _emptyString();
         size_t len = st.length;
         result._data._ptr = cast(char*) malloc(len+1);
         if(len > 0) strncpy(result._data._ptr, &st[0], len);
@@ -91,10 +91,10 @@ nothrow:
         return _data._length;
     }
 
-    RCString opBinary(string op)(RCString rhs)
+    String opBinary(string op)(String rhs)
     {
         static if (op == "+") {
-            auto result = _emptyRCString();
+            auto result = _emptyString();
             int len1 = _data._length;
             int len2 = rhs._data._length;
             result._data._ptr = cast(char*) malloc(len1 + len2 + 1);
@@ -108,10 +108,10 @@ nothrow:
         else static assert(0, "Operator "~op~" not implemented");
     }
 
-    RCString opBinary(string op)(string rhs)
+    String opBinary(string op)(string rhs)
     {
         static if (op == "+") {
-            auto result = _emptyRCString();
+            auto result = _emptyString();
             size_t len1 = _data._length;
             size_t len2 = rhs.length;
             result._data._ptr = cast(char*) malloc(len1 + len2 + 1);
@@ -125,15 +125,15 @@ nothrow:
         else static assert(0, "Operator "~op~" not implemented");
     }
 
-    RCString opBinary(string op, T)(T rhs)
+    String opBinary(string op, T)(T rhs)
     {
         static if (op == "+") {
-            static if(is(typeof(rhs) == RCString)) {
+            static if(is(typeof(rhs) == String)) {
                 return opBinary!op(rhs);
-            }else static if (is(typeof(rhs.toRCString()) == RCString)) {
-                return opBinary!op(rhs.toRCString());
+            }else static if (is(typeof(rhs.toString()) == String)) {
+                return opBinary!op(rhs.toString());
             }else {
-                auto result = RCString("[");
+                auto result = String("[");
                 char[1024] tmp;
                 char* cptr = cast(char*) tmp;
                 format!T(cptr, rhs);
@@ -166,7 +166,7 @@ nothrow:
         else static assert(0, "Operator "~op~" not implemented");
     }
 
-    void opOpAssign(string op)(RCString rhs) {
+    void opOpAssign(string op)(String rhs) {
         static if (op == "+") {
             size_t len1 = _data._length;
             size_t len2 = rhs.length;
@@ -182,10 +182,10 @@ nothrow:
     void opOpAssign(string op, T)(T rhs) {
         
         static if (op == "+") {
-            static if(is(typeof(rhs) == RCString)) {
+            static if(is(typeof(rhs) == String)) {
                 opOpAssign!op(rhs);
-            }else static if (is(typeof(rhs.toRCString()) == RCString)) {
-                opOpAssign!op(rhs.toRCString());
+            }else static if (is(typeof(rhs.toString()) == String)) {
+                opOpAssign!op(rhs.toString());
             }else {
                 char [1024] tmp;
                 char* cptr = cast(char*) tmp;
@@ -203,13 +203,13 @@ nothrow:
         else static assert(0, "Operator "~op~" not implemented");
     }
 
-    RCString subString(size_t start, size_t end) {
+    String subString(size_t start, size_t end) {
         if(start < 0) start = 0;
         if(end > _data._length) end = _data._length;
         if(start > end) end = start;
         int len = cast(int) (end - start);
 
-        auto result = _emptyRCString();
+        auto result = _emptyString();
         result._data._ptr = cast(char*) malloc(len + 1);
         if(len > 0) strncpy(result._data._ptr, _data._ptr + start, len);
         result._data._ptr[len] = 0;
@@ -217,7 +217,7 @@ nothrow:
         return result;
     }
 
-    RCString subString(int start) {
+    String subString(int start) {
         return subString(start, _data._length);
     }
 
@@ -234,12 +234,12 @@ nothrow:
         return indexOf(ptr);
     }
 
-    int indexOf(RCString st) {
+    int indexOf(String st) {
         return indexOf(st._data._ptr);
     }
     
-    private RCList!RCString _split(const char* delimiter) {
-        auto lst = RCList!RCString();
+    private List!String _split(const char* delimiter) {
+        auto lst = List!String();
         size_t delimiter_len = strlen(delimiter);
         char *ptr = _data._ptr;
         char *pos;
@@ -251,28 +251,28 @@ nothrow:
 
             int len = cast(int)(pos - ptr);
             if (len > 0) {
-                lst.add(RCString(cast (string) (ptr[0..len])));
+                lst.add(String(cast (string) (ptr[0..len])));
             }
             ptr = pos + delimiter_len;
         }
 
         if (ptr  < _data._ptr + _data._length){
             int len = cast(int)(_data._ptr + _data._length - ptr);
-            lst.add(RCString(cast (string) (ptr[0..len])));
+            lst.add(String(cast (string) (ptr[0..len])));
         }
 
         return lst;
     }
 
-    RCList!RCString split(string st) {
+    List!String split(string st) {
         return _split(&st[0]);
     }
 
-    RCList!RCString split(RCString st) {
+    List!String split(String st) {
         return _split(st._data._ptr);
     }
 
-    RCString join(RCList!RCString lst) {
+    String join(List!String lst) {
         int totalLength = 0;
 
         foreach(i,st; lst) {
@@ -282,7 +282,7 @@ nothrow:
             }
         }
 
-        auto result = _emptyRCString();
+        auto result = _emptyString();
         result._data._ptr = cast(char*) malloc(totalLength + 1);
 
         char* ptr = result._data._ptr;
@@ -306,7 +306,7 @@ nothrow:
         return hashOf(cast(string)_data._ptr[0.._data._length]);
     }
 
-    bool opEquals(RCString st2){        
+    bool opEquals(String st2){        
         auto s1 = cast(string) _data._ptr[0.._data._length];
         auto s2 = cast(string) st2._data._ptr[0..st2._data._length];
         return s1 == s2;
@@ -326,9 +326,9 @@ nothrow:
     }
 
     unittest {
-        auto items = RCString("1,2,3,4").split(",");        
-        assert(RCString("-").join(items) == "1-2-3-4");
-        auto st = RCString("Hello world");
+        auto items = String("1,2,3,4").split(",");        
+        assert(String("-").join(items) == "1-2-3-4");
+        auto st = String("Hello world");
         assert(st.indexOf("123") == -1);
         assert(st.indexOf("world") == 6);
         assert(st.subString(6, 8) == "wo");
@@ -336,7 +336,7 @@ nothrow:
     }
 }
 
-private struct _RCListData(T) {
+private struct _ListData(T) {
     T* _items;
     size_t _size;
     size_t _capacity;
@@ -345,9 +345,9 @@ private struct _RCListData(T) {
 
     ~this() {
         if(_items) {
-            //printf("Free RCList\n");
+            //printf("Free List\n");
             for(int i = 0; i < _size; i++) {
-                static if(!is(typeof(_items[0]) == RCString)) {
+                static if(!is(typeof(_items[0]) == String)) {
                     destroy(_items[i]);
                 }else {
                     destroy(_items[i]._data);
@@ -360,9 +360,9 @@ private struct _RCListData(T) {
     }
 }
 
-struct RCList(T) {
+struct List(T) {
 nothrow:    
-    private RefCounted!(_RCListData!T, RefCountedAutoInitialize.no) _data;
+    private RefCounted!(_ListData!T, RefCountedAutoInitialize.no) _data;
     
     @disable hash_t toHash();
 
@@ -370,19 +370,25 @@ nothrow:
         return _data.refCountedStore().isInitialized();
     }
 
-    static RCList opCall(size_t sz) {
-        RCList lst;
-        auto data = _RCListData!T(null, 0, 0);
+    static List opCall(size_t sz) {
+        List lst;
+        auto data = _ListData!T(null, 0, 0);
         lst._data = refCounted(move(data));
 
         lst._data._items = cast (T*) malloc(T.sizeof * sz);
-        memset(cast(char*) lst._data._items, 0, T.sizeof * sz);
+
+        //memset(cast(char*) lst._data._items, 0, T.sizeof * sz);
+
+        for(size_t i = 0; i < sz; i++) {
+            lst._data._items[i] = T();
+        }
+
         lst._data._size = lst._data._capacity = sz;
 
         return lst;
     }
 
-    static RCList opCall() {
+    static List opCall() {
         return opCall(0);
     }
 
@@ -409,6 +415,11 @@ nothrow:
 
     void resize(size_t size) {
         _ensureCap(size);
+        if(size > _data._size) {
+            for(size_t i = _data._size; i < size; i++) {
+                _data._items[i] = T();
+            }
+        }
         _data._size = size;
     }
 
@@ -421,7 +432,7 @@ nothrow:
 
         void remove(int index) {
             if(cast(uint) index >= _data._size) {
-                printf("RCList index %d is out of range %d", cast(int) index, cast(int) _data._size);
+                printf("List index %d is out of range %d", cast(int) index, cast(int) _data._size);
                 exit(0);
             }
             
@@ -442,7 +453,7 @@ nothrow:
 
         void remove(int index) {
             if(cast(uint) index >= _data._size) {
-                printf("RCList index %d is out of range %d", cast(int) index, cast(int) _data._size);
+                printf("List index %d is out of range %d", cast(int) index, cast(int) _data._size);
                 exit(0);
             }
             
@@ -458,7 +469,7 @@ nothrow:
     ref T opIndex(int i) {
         version(noboundcheck) {} else {
             if(cast(uint) i >= _data._size) {
-                printf("RCList index %d is out of range %d", cast(int) i, cast(int) _data._size);
+                printf("List index %d is out of range %d", cast(int) i, cast(int) _data._size);
                 exit(0);
             }
         }
@@ -466,9 +477,9 @@ nothrow:
     }
 
     static if(isCopyable!T) {
-        private static RCList _fromRaw(T* ptr, size_t size) {
-            RCList lst;
-            auto data = _RCListData!T(null, 0, 0);
+        private static List _fromRaw(T* ptr, size_t size) {
+            List lst;
+            auto data = _ListData!T(null, 0, 0);
             lst._data = refCounted(move(data));
             lst._data._items = ptr;
             lst._data._size = size;
@@ -476,8 +487,8 @@ nothrow:
             return lst;
         }
 
-        static RCList opCall(T[] items) {
-            auto lst = RCList();
+        static List opCall(T[] items) {
+            auto lst = List();
             lst.resize(items.length);
 
             for(int i = 0; i < items.length; i++) {
@@ -494,8 +505,8 @@ nothrow:
             return -1;
         }
 
-        RCList!int findAll(T item) {
-            RCList!int lst = RCList!int();
+        List!int findAll(T item) {
+            List!int lst = List!int();
             for(int i = 0; i < _data._size; i++) {
                 if(_data._items[i] == item) lst.add(i);
             }
@@ -509,7 +520,7 @@ nothrow:
             return -1;
         }
 
-        RCList opSlice(size_t start, size_t end) {
+        List opSlice(size_t start, size_t end) {
             if(start < 0) start = 0;
             if(end > _data._size) end = _data._size;
 
@@ -520,11 +531,11 @@ nothrow:
                 return _fromRaw(ptr, size);
             }
 
-            return RCList();
+            return List();
         }
 
-        RCList opIndex(int[] indexes) {
-            auto lst = RCList();
+        List opIndex(int[] indexes) {
+            auto lst = List();
             lst.resize(indexes.length);
             T[] tmp = lst._view();
 
@@ -532,7 +543,7 @@ nothrow:
                 int index = indexes[i];
                 version(noboundcheck) {} else {
                     if(cast(uint) index >= _data._size) {
-                        printf("RCList index %d is out of range %d", cast(int) index, cast(int) _data._size);
+                        printf("List index %d is out of range %d", cast(int) index, cast(int) _data._size);
                         exit(0);
                     }
                 }
@@ -542,12 +553,12 @@ nothrow:
             return lst;
         }
 
-        RCList opIndex(RCList!int indexes) {
+        List opIndex(List!int indexes) {
             return opIndex(indexes._view());
         }
 
-        RCList filter(bool delegate(ref T) nothrow func) {
-            auto lst = RCList();
+        List filter(bool delegate(ref T) nothrow func) {
+            auto lst = List();
             for(int i = 0; i < _data._size; i++) {
                 if(func(_data._items[i])) {
                     lst.add(_data._items[i]);
@@ -556,8 +567,8 @@ nothrow:
             return lst;
         }
 
-        RCList filter(bool delegate(T) nothrow func) {
-            auto lst = RCList();
+        List filter(bool delegate(T) nothrow func) {
+            auto lst = List();
             for(int i = 0; i < _data._size; i++) {
                 if(func(_data._items[i])) {
                     lst.add(_data._items[i]);
@@ -566,8 +577,8 @@ nothrow:
             return lst;
         }
 
-        RCList!U map(U)(U delegate(T) nothrow f) {
-            auto lst = RCList!U();
+        List!U map(U)(U delegate(T) nothrow f) {
+            auto lst = List!U();
             lst.resize(size());
 
             for(int i = 0; i < _data._size; i++) 
@@ -578,14 +589,14 @@ nothrow:
             return lst;
         }
 
-        RCDict!(U, RCList!T) groupBy(U)(U delegate(ref T) nothrow f) {
-            auto groups = RCDict!(U, RCList!T)();
-            RCList null_lst;
+        Dict!(U, List!T) groupBy(U)(U delegate(ref T) nothrow f) {
+            auto groups = Dict!(U, List!T)();
+            List null_lst;
             for(int i = 0; i < _data._size; i++) {
                 auto key = f(_data._items[i]);
                 auto group = groups.getOrDefault(key, null_lst);
                 if(!group.isInitialized()) {
-                    group = RCList!T();
+                    group = List!T();
                     groups[key] = group;
                 }
                 group.add(_data._items[i]);
@@ -593,14 +604,14 @@ nothrow:
             return groups;
         }
 
-        RCDict!(U, RCList!T) groupBy(U)(U delegate(T) nothrow f) {
-            auto groups = RCDict!(U, RCList!T)();
-            RCList null_lst;
+        Dict!(U, List!T) groupBy(U)(U delegate(T) nothrow f) {
+            auto groups = Dict!(U, List!T)();
+            List null_lst;
             for(int i = 0; i < _data._size; i++) {
                 auto key = f(_data._items[i]);
                 auto group = groups.getOrDefault(key, null_lst);
                 if(!group.isInitialized()) {
-                    group = RCList!T();
+                    group = List!T();
                     groups[key] = group;
                 }
                 group.add(_data._items[i]);
@@ -649,8 +660,8 @@ nothrow:
         return total;
     }
 
-    RCList!U map(U)(U delegate(ref T) nothrow f) {
-        auto lst = RCList!U();
+    List!U map(U)(U delegate(ref T) nothrow f) {
+        auto lst = List!U();
         lst.resize(size());
 
         for(int i = 0; i < _data._size; i++) 
@@ -698,8 +709,8 @@ nothrow:
             }
         }
 
-        RCList!int argsort(bool delegate(T, T) nothrow lt_func=null) { 
-            auto indexes = RCList!int(_data._size);
+        List!int argsort(bool delegate(T, T) nothrow lt_func=null) { 
+            auto indexes = List!int(_data._size);
 
             auto indexes_ptr = indexes._data._items;
 
@@ -713,18 +724,18 @@ nothrow:
         }
     }
 
-    RCString toRCString() {
-        auto result = RCString("[");
+    String toString() {
+        auto result = String("[");
         char[1024] tmp;
 
         char* cptr = cast(char*) tmp;
         for(int i = 0; i < _data._size; i++) 
         {        
-            static if(is(typeof(_data._items[0]) == RCString)) {
+            static if(is(typeof(_data._items[0]) == String)) {
                 result += "'";
                 result += _data._items[i] + "'";
-            }else static if (is(typeof(_data._items[0].toRCString()) == RCString)) {
-                result += _data._items[i].toRCString();
+            }else static if (is(typeof(_data._items[0].toString()) == String)) {
+                result += _data._items[i].toString();
             }else {
                 format!T(cptr, _data._items[i]);
                 size_t len = strlen(cptr);
@@ -740,7 +751,7 @@ nothrow:
 unittest {    
 
     int[5] arr = [2,3,1,5,0];
-    auto lst = RCList!int(arr);    
+    auto lst = List!int(arr);    
 
     auto indexes = lst.argsort();
     assert(indexes[0] == 4 && indexes[1] == 2 && indexes[2] == 0 && indexes[3] == 1 && indexes[4] == 3);
@@ -752,7 +763,7 @@ unittest {
     assert(sum == 11);
 
     lst = lst.filter(x => x > 1).map(x => x*x);
-    auto llst = RCList!(RCList!int)();
+    auto llst = List!(List!int)();
     llst.add(lst);
 
     foreach(ref x; llst[0]) {
@@ -767,7 +778,7 @@ unittest {
 }
 
 unittest {
-    auto arr = RCList!int();
+    auto arr = List!int();
     for(int i = 0; i < 100; i++) {
         arr.add(i);
     }
@@ -817,7 +828,7 @@ DictItem!(K,V)* newItem(K,V)() {
     return ptr;
 }
 
-private struct _RCDictData(K, V) {
+private struct _DictData(K, V) {
 nothrow:
     DictItem!(K,V)** _table;
     size_t _bucketSize;
@@ -827,7 +838,7 @@ nothrow:
 
     ~this() {
         if(_table) {                
-            //printf("Free RCDict\n");
+            //printf("Free Dict\n");
             for(int i = 0; i < _bucketSize; i++) {
                 auto ptr = _table[i];
                 while(ptr != null) {
@@ -845,10 +856,10 @@ nothrow:
     }
 }
 
-public struct RCDict(K, V) {
+public struct Dict(K, V) {
 nothrow:
 
-    private RefCounted!(_RCDictData!(K,V), RefCountedAutoInitialize.no) _data;
+    private RefCounted!(_DictData!(K,V), RefCountedAutoInitialize.no) _data;
 
     @disable hash_t toHash();
     
@@ -856,9 +867,9 @@ nothrow:
         return _data.refCountedStore().isInitialized();
     }
 
-    static RCDict opCall() {
-        RCDict dict;
-        auto data = _RCDictData!(K,V)(null, 0, 0);
+    static Dict opCall() {
+        Dict dict;
+        auto data = _DictData!(K,V)(null, 0, 0);
         dict._data = refCounted(move(data));
         dict._data._size = 0;
         dict._data._bucketSize = 16;
@@ -913,13 +924,13 @@ nothrow:
         char[1024] tmp;
         char* cptr = cast(char*) tmp;
         
-        printf("RCDict key not found error: ");
+        printf("Dict key not found error: ");
         
-        static if(is(typeof(key) == RCString)) {
+        static if(is(typeof(key) == String)) {
             key.print();
         }
-        else static if (is(typeof(key.toRCString()) == RCString)) {
-            key.toRCString().print();
+        else static if (is(typeof(key.toString()) == String)) {
+            key.toString().print();
         }else {
             format!K(cptr, key);
             printf("%s", cptr);
@@ -1035,8 +1046,8 @@ nothrow:
         _data._bucketSize *= 2;
     }
 
-    RCList!K getKeys() {
-        auto lst = RCList!K();
+    List!K getKeys() {
+        auto lst = List!K();
         for(int i = 0; i < _data._bucketSize;i++) {
             auto ptr = _data._table[i];
             while(ptr != null) {
@@ -1048,8 +1059,8 @@ nothrow:
     }
 
     static if(isCopyable!V) {
-        RCList!V getValues() {
-            auto lst = RCList!V();
+        List!V getValues() {
+            auto lst = List!V();
             for(int i = 0; i < _data._bucketSize;i++) {
                 auto ptr = _data._table[i];
                 while(ptr != null) {
@@ -1060,8 +1071,8 @@ nothrow:
             return lst;
         }
 
-        RCList!(DictItem!(K,V)) getItems() {
-            auto lst = RCList!(DictItem!(K,V))();
+        List!(DictItem!(K,V)) getItems() {
+            auto lst = List!(DictItem!(K,V))();
             for(int i = 0; i < _data._bucketSize;i++) {
                 auto ptr = _data._table[i];
                 while(ptr != null) {
@@ -1130,8 +1141,8 @@ nothrow:
         return _data._size;
     }
 
-    RCString toRCString() {
-        auto result = RCString("{");
+    String toString() {
+        auto result = String("{");
         int count = 0;
         char[1024] tmp;
         char* cptr = cast(char*) tmp;
@@ -1140,13 +1151,13 @@ nothrow:
         for(int i = 0; i < _data._bucketSize;i++) {
             auto ptr = _data._table[i];
             while(ptr != null) {
-                static if(is(typeof(ptr.key) == RCString)) {
+                static if(is(typeof(ptr.key) == String)) {
                     result += "'";
                     result += ptr.key;
                     result += "'";
                 }
-                else static if (is(typeof(ptr.key.toRCString()) == RCString)) {
-                    result += ptr.key.toRCString();
+                else static if (is(typeof(ptr.key.toString()) == String)) {
+                    result += ptr.key.toString();
                 }else {
                     format!K(cptr, ptr.key);
                     len = strlen(cptr);
@@ -1155,13 +1166,13 @@ nothrow:
 
                 result += ": ";
 
-                static if(is(typeof(ptr.value) == RCString)) {
+                static if(is(typeof(ptr.value) == String)) {
                     result += "'";
                     result += ptr.value;
                     result += "'";
                 }
-                else static if (is(typeof(ptr.value.toRCString()) == RCString)) {
-                    result += ptr.value.toRCString();
+                else static if (is(typeof(ptr.value.toString()) == String)) {
+                    result += ptr.value.toString();
                 }else {
                     format!V(cptr, ptr.value);
                     len = strlen(cptr);
@@ -1180,7 +1191,7 @@ nothrow:
 }
 
 unittest {
-    auto m = RCDict!(int, int)();
+    auto m = Dict!(int, int)();
     for(int i = 50; i < 70; i++) {
         m[2*i] = i;
     }
@@ -1189,15 +1200,15 @@ unittest {
 }
 
 unittest {
-    auto m = RCDict!(RCString, int)();    
-    m[RCString("12")] = 100;
-    auto s = RCString("1");
+    auto m = Dict!(String, int)();    
+    m[String("12")] = 100;
+    auto s = String("1");
     assert(m[s + "2"] == 100);
 }
 
-public struct RCSet(T) {
+public struct Set(T) {
 nothrow:
-    private RCDict!(T, int) _dict;
+    private Dict!(T, int) _dict;
    
     @disable hash_t toHash();
 
@@ -1205,22 +1216,22 @@ nothrow:
         return _dict.isInitialized();
     }
 
-    static RCSet opCall() {
-        RCSet set;
-        set._dict = RCDict!(T, int)();
+    static Set opCall() {
+        Set set;
+        set._dict = Dict!(T, int)();
         return set;
     }
 
-    static RCSet opCall(T[] arr) {
-        auto set = RCSet();
+    static Set opCall(T[] arr) {
+        auto set = Set();
         foreach(x; arr) {
             set._dict[x] = 1;
         }
         return set;
     }
 
-    static RCSet opCall(RCList!T lst) {
-        auto set = RCSet();
+    static Set opCall(List!T lst) {
+        auto set = Set();
         foreach(x; lst) {
             set._dict[x] = 1;
         }
@@ -1239,7 +1250,7 @@ nothrow:
         _dict.remove(value);
     }
 
-    RCList!T toList() {
+    List!T toList() {
         return _dict.getKeys();
     }
 
@@ -1257,20 +1268,20 @@ nothrow:
         return _dict.size();
     }
 
-    RCString toRCString() {
+    String toString() {
         char[1024] tmp;
-        auto result = RCString("{");
+        auto result = String("{");
         int count = 0;
         char* cptr = cast(char*) tmp;
         auto sz = size();
 
         foreach(ref item; _dict) {
-            static if(is(typeof(item.key) == RCString)) {
+            static if(is(typeof(item.key) == String)) {
                 result += "'";
                 result += item.key;
                 result += "'";
-            }else static if (is(typeof(item.key.toRCString()) == RCString)) {
-                result += item.key.toRCString();
+            }else static if (is(typeof(item.key.toString()) == String)) {
+                result += item.key.toString();
             }else {
                 format!T(cptr, item.key);
                 size_t len = strlen(cptr);
@@ -1287,7 +1298,7 @@ nothrow:
 
 unittest {
     int[5] arr = [1, 5, 6, 7, 8];
-    auto s = RCSet!int(arr);
+    auto s = Set!int(arr);
     s.add(1);
     s.add(2);
     s.add(3);

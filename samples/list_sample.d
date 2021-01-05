@@ -1,29 +1,29 @@
 import core.stdc.stdio;
-import collections;
+import RC: String, List;
 
 void test1() {
     int[5] arr = [2,3,1,5,0];
-    auto lst = RCList!int(arr);    
+    auto lst = List!int(arr);    
 
     printf("Original list: ");
-    lst.toRCString.printLine();
+    lst.toString.printLine();
     
     auto indexes = lst.argsort();
     printf("Sorted indexes: ");
-    indexes.toRCString.printLine();
+    indexes.toString.printLine();
 
     lst.sort();
     printf("Sorted list: ");
-    lst.toRCString().printLine();
+    lst.toString().printLine();
 
     auto sum = lst.reduce((x, y) => x + y);
     printf("Sum: %d\n", sum);
 
     lst = lst.filter(x => x > 1).map(x => x*x);
-    auto llst = RCList!(RCList!int)();
+    auto llst = List!(List!int)();
     llst.add(lst);
 
-    llst.toRCString().printLine();
+    llst.toString().printLine();
 
     foreach(ref x; llst[0]) {
         x += 1;
@@ -35,7 +35,7 @@ void test1() {
 }
 
 void test2() {
-    auto arr = RCList!int();
+    auto arr = List!int();
     
     for(int i = 0; i < 100; i++) {
         arr.add(i);

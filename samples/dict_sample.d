@@ -1,8 +1,8 @@
 import core.stdc.stdio;
-import collections;
+import RC: Dict, String;
 
 void test1() {
-    auto m = RCDict!(int, int)();
+    auto m = Dict!(int, int)();
     
     for(int i = 50; i < 70; i++) {
         m[2*i] = i;
@@ -14,13 +14,13 @@ void test1() {
         printf("%d --> %d\n", item.key, item.value);
     }
     
-    m.toRCString().printLine();
+    m.toString().printLine();
 }
 
 void test2() {
-    auto m = RCDict!(RCString, int)();    
-    m[RCString("12")] = 100;
-    auto s = RCString("1");   
+    auto m = Dict!(String, int)();    
+    m[String("12")] = 100;
+    auto s = String("1");   
     printf("%d\n", m[s + "2"]);
 }
 

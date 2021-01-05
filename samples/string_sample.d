@@ -1,17 +1,17 @@
 import core.stdc.stdio;
-import collections;
+import RC : String;
 
 extern(C) int main() 
 {
-    auto items = RCString("1,2,3,4").split(",");
-    items.toRCString().printLine();
+    auto items = String("1,2,3,4").split(",");
+    items.toString().printLine();
 
-    RCString("-").join(items).printLine();
+    String("-").join(items).printLine();
 
-    printf("%d\n", RCString("Hello world").indexOf("123"));
-    printf("%d\n", RCString("Hello world").indexOf("world"));
-    RCString("Hello world").subString(6, 8).printLine();
-    RCString("Hello world").subString(6).printLine();
+    printf("%d\n", String("Hello world").indexOf("123"));
+    printf("%d\n", String("Hello world").indexOf("world"));
+    String("Hello world").subString(6, 8).printLine();
+    String("Hello world").subString(6).printLine();
     
     return 0;
 }

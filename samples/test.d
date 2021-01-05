@@ -1,4 +1,4 @@
-import collections;
+import RC;
 
 int main()
 {

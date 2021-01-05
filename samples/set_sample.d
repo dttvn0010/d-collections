@@ -1,10 +1,10 @@
 import core.stdc.stdio;
-import collections;
+import RC : Set;
 
 extern(C) int main() 
 {
     int[5] arr = [1, 5, 6, 7, 8];
-    auto s = RCSet!int(arr);
+    auto s = Set!int(arr);
     
     s.add(1);
     s.add(2);
@@ -16,7 +16,7 @@ extern(C) int main()
         printf("%d\n", x);
     }
     
-    s.toRCString().printLine();
+    s.toString().printLine();
     
     return 0;
 }
